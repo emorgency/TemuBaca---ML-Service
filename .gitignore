@@ -10,9 +10,6 @@ __pycache__/
 # Jupyter
 .ipynb_checkpoints/
 
-# Dataset
-data/
-
 # Environment / secrets
 .env
 .env.*
