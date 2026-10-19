@@ -26,13 +26,19 @@ ml-service/
 │   ├── main.py
 │   ├── config.py
 │   ├── model_store.py
+│   ├── region.py
+│   ├── text.py
 │   ├── recommender.py
 │   ├── community.py
 │   └── schemas.py
 │
 ├── data/
 │   ├── raw/
-│   └── processed/
+│   ├── processed/
+│   └── reference/
+│
+├── scripts/
+│   └── build_region_table.py
 │
 ├── models/
 │   ├── tfidf_vectorizer.joblib
@@ -44,7 +50,8 @@ ml-service/
 │
 ├── tests/
 │   ├── test_recommender.py
-│   └── test_community.py
+│   ├── test_community.py
+│   └── test_regressions.py
 │
 ├── docs/
 │   └── BACKEND_PETA_RUTE.md
@@ -190,11 +197,14 @@ POST /api/recommendations/communities
 ```json
 {
   "user_interests": ["fantasy", "magic"],
-  "user_city": "Tangerang Selatan",
-  "user_province": "Banten",
+  "user_region_code": "36.74",
   "top_n": 5
 }
 ```
+
+* `user_region_code` opsional: kode kab/kota Kemendagri (`NN.NN`) atau kode provinsi saja (`NN`). Kode yang formatnya salah atau tidak ada di tabel referensi menghasilkan `422`.
+* Field lain ditolak dengan `422`, termasuk `user_city` dan `user_province` yang sudah dihapus.
+* Batas minat sama dengan rekomendasi buku: maksimal 20 minat, masing-masing maksimal 50 karakter.
 
 ### Response
 
@@ -204,14 +214,25 @@ POST /api/recommendations/communities
     {
       "community_id": "C001",
       "name": "Komunitas Pecinta Fantasy",
+      "region_code": "36.74",
+      "region_name": "Kota Tangerang Selatan",
       "interest_score": 0.8486,
       "location_score": 1.0,
       "score": 0.894,
-      "reason": "Sesuai dengan minat: fantasy, magic dan Berada di kota yang sama"
+      "reason": "Sesuai dengan minat: fantasy, magic dan berada di Kota Tangerang Selatan"
     }
-  ]
+  ],
+  "unmatched_interests": [],
+  "notice": null
 }
 ```
+
+* Hanya komunitas dengan `score > 0` yang dikembalikan, jadi jumlahnya bisa kurang dari `top_n`.
+* `notice`:
+  * `NEEDS_INTERESTS_OR_LOCATION`: minat kosong dan kode wilayah tidak diberikan; `recommendations` kosong.
+  * `NO_MATCH`: ada input, tapi tidak ada komunitas dengan skor > 0; `recommendations` kosong.
+  * `null`: ada hasil.
+* `unmatched_interests`: minat yang tidak dikenali model, sama seperti rekomendasi buku.
 
 ### Scoring
 
@@ -226,12 +247,35 @@ final_score =
 Location score:
 
 ```text
-1.0 = kota sama
-0.5 = provinsi sama
-0.0 = berbeda
+1.0 = kode kab/kota sama
+0.5 = kode provinsi sama
+0.0 = berbeda atau pengguna tidak memberi kode wilayah
 ```
 
-Sistem hanya menggunakan lokasi umum seperti kota dan provinsi.
+Alasan minat dicocokkan per token, sama seperti rekomendasi buku.
+
+### Kode Wilayah
+
+Tabel referensi ada di `data/reference/`:
+
+* `wilayah_kabkota.csv` (514 kab/kota) dan `wilayah_provinsi.csv` (38 provinsi), berdasarkan Kepmendagri No. 300.2.2-2138 Tahun 2025 yang diubah dengan No. 300.2.2-2430 Tahun 2025.
+* Dibuat ulang dengan `python scripts/build_region_table.py` dari dataset `cahyadsn/wilayah` (MIT) pada commit yang di-pin.
+* Sumber, lisensi, dan hasil verifikasi terhadap PDF resmi dicatat di `wilayah_meta.json`.
+
+Sistem hanya memakai kode kab/kota dan provinsi, tidak memakai kecamatan, desa, atau koordinat.
+
+### Perubahan Kontrak (untuk backend utama)
+
+Breaking change dibanding versi awal:
+
+* Request: `user_city` dan `user_province` dihapus, diganti `user_region_code`. Request lama gagal dengan `422`.
+* Request: field yang tidak dikenal ditolak (`extra="forbid"`).
+* Response item: tambah `region_code` dan `region_name`.
+* Response: tambah `unmatched_interests` dan `notice`; daftar bisa kosong.
+* Komunitas berskor 0 tidak lagi dikembalikan.
+* Rekomendasi buku (aditif): item tambah `source`, response tambah `unmatched_interests`, buku berskor 0 diganti buku populer.
+
+`API_SPEC.md` di repo website perlu diperbarui, termasuk metode `POST`.
 
 ---
 
@@ -264,7 +308,7 @@ Hasil:
 ### Total
 
 ```text
-10 tests passed
+29 tests passed
 ```
 
 ### Regression
@@ -383,5 +427,5 @@ python -m pytest tests
 Expected result:
 
 ```text
-19 passed
+29 passed
 ```

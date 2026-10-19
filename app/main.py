@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from app.recommender import get_recommendations
-from app.community import recommend_communities
+from app.community import community_notice, recommend_communities
 from app.text import normalize_interests, unmatched_interests
 
 from app.schemas import (
@@ -47,11 +47,18 @@ def recommend_books(request: BookRecommendationRequest):
 def recommend_community(request: CommunityRecommendationRequest):
     recommendations = recommend_communities(
         user_interests=request.user_interests,
-        user_city=request.user_city,
-        user_province=request.user_province,
+        user_region_code=request.user_region_code,
         top_n=request.top_n
     )
 
     return {
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "unmatched_interests": unmatched_interests(
+            normalize_interests(request.user_interests)
+        ),
+        "notice": community_notice(
+            request.user_interests,
+            request.user_region_code,
+            recommendations
+        )
     }

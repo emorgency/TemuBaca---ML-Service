@@ -115,3 +115,91 @@ def test_same_request_gives_identical_response():
     second = client.post("/api/recommendations/books", json=payload).json()
 
     assert first == second
+
+
+# Community tests use codes from data/reference/wilayah_kabkota.csv:
+# 36.74 Kota Tangerang Selatan, 36.71 Kota Tangerang (both in Banten 36),
+# 32.73 Kota Bandung (Jawa Barat 32).
+
+def post_communities(payload):
+    return client.post("/api/recommendations/communities", json=payload)
+
+
+# B-2 (communities): substring matches no longer count.
+
+def test_b2_community_substring_is_not_a_match():
+    response = post_communities({"user_interests": ["lit"]})
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["recommendations"] == []
+    assert body["notice"] == "NO_MATCH"
+
+
+# B-3: location is matched by region code.
+
+def test_b3_same_kabkota_scores_one():
+    body = post_communities({"user_interests": ["fantasy"], "user_region_code": "36.74"}).json()
+    c001 = next(item for item in body["recommendations"] if item["community_id"] == "C001")
+
+    assert c001["location_score"] == 1.0
+    assert c001["region_name"] == "Kota Tangerang Selatan"
+    assert "berada di Kota Tangerang Selatan" in c001["reason"]
+
+
+def test_b3_same_province_scores_half():
+    for code in ("36.71", "36"):
+        body = post_communities({"user_interests": ["fantasy"], "user_region_code": code}).json()
+        c001 = next(item for item in body["recommendations"] if item["community_id"] == "C001")
+
+        assert c001["location_score"] == 0.5
+        assert "berada di provinsi Banten" in c001["reason"]
+
+
+def test_b3_other_province_scores_zero():
+    body = post_communities({"user_interests": ["fantasy"], "user_region_code": "32.73"}).json()
+
+    assert all(
+        item["location_score"] == 0.0
+        for item in body["recommendations"]
+        if item["community_id"] != "C004"
+    )
+
+
+def test_b3_unknown_code_is_rejected():
+    assert post_communities({"user_region_code": "36.99"}).status_code == 422
+
+
+def test_b3_malformed_code_is_rejected():
+    assert post_communities({"user_region_code": "36-74"}).status_code == 422
+
+
+def test_b3_removed_city_field_is_rejected():
+    response = post_communities({"user_interests": ["fantasy"], "user_city": "Tangerang Selatan"})
+
+    assert response.status_code == 422
+
+
+# B-4: no interests and no location gives an empty list with a notice.
+
+def test_b4_no_interests_and_no_location_returns_notice():
+    response = post_communities({"user_interests": ["  "]})
+    body = response.json()
+
+    assert response.status_code == 200
+    assert body["recommendations"] == []
+    assert body["notice"] == "NEEDS_INTERESTS_OR_LOCATION"
+
+
+def test_b4_only_positive_scores_are_returned():
+    body = post_communities({"user_interests": ["fantasy", "romansa"], "top_n": 5}).json()
+
+    assert body["recommendations"]
+    assert all(item["score"] > 0 for item in body["recommendations"])
+    assert body["unmatched_interests"] == ["romansa"]
+    assert body["notice"] is None
+
+
+def test_b6_community_request_is_bounded():
+    assert post_communities({"user_interests": ["x" * 51]}).status_code == 422
+    assert post_communities({"user_interests": [f"m{i}" for i in range(21)]}).status_code == 422
