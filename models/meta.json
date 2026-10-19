@@ -1,0 +1,14 @@
+{
+  "model": "TF-IDF content-based recommendation",
+  "version": "1.0",
+  "source": "notebooks/01_exploration.ipynb (no training script yet)",
+  "artifacts": {
+    "tfidf_vectorizer.joblib": "TfidfVectorizer(max_features=10000, stop_words='english')",
+    "book_vectors.joblib": "csr_matrix, 10000 books x 10000 features"
+  },
+  "dataset": "Goodbooks-10k (data/processed/books_processed.csv)",
+  "scikit_learn_version": "1.9.1",
+  "scikit_learn_version_evidence": "Loads under scikit-learn 1.9.1 without InconsistentVersionWarning (checked 2026-10-19, Python 3.14.7).",
+  "created_at": null,
+  "created_at_note": "Exact creation date not recorded. Artifacts first committed in 5d5f357 on 2026-10-04."
+}
