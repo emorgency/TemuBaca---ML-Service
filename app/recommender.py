@@ -5,6 +5,8 @@ import pandas as pd
 from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
+from app.model_store import tfidf
+
 
 # =========================
 # PROJECT PATH
@@ -19,12 +21,6 @@ DATA_PATH = (
     / "books_processed.csv"
 )
 
-TFIDF_PATH = (
-    BASE_DIR
-    / "models"
-    / "tfidf_vectorizer.joblib"
-)
-
 BOOK_VECTORS_PATH = (
     BASE_DIR
     / "models"
@@ -37,8 +33,6 @@ BOOK_VECTORS_PATH = (
 # =========================
 
 books_ml = pd.read_csv(DATA_PATH)
-
-tfidf = joblib.load(TFIDF_PATH)
 
 book_vectors = joblib.load(BOOK_VECTORS_PATH)
 

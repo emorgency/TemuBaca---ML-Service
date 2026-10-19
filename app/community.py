@@ -1,24 +1,8 @@
-import joblib
 import pandas as pd
 
-from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
-
-# =========================
-# PROJECT PATH
-# =========================
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-TFIDF_PATH = BASE_DIR / "models" / "tfidf_vectorizer.joblib"
-
-
-# =========================
-# LOAD MODEL
-# =========================
-
-tfidf = joblib.load(TFIDF_PATH)
+from app.model_store import tfidf
 
 
 # =========================
