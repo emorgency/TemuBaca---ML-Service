@@ -6,6 +6,7 @@ from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.model_store import tfidf
+from app.text import normalize_interests
 
 
 # =========================
@@ -72,6 +73,8 @@ def recommend_books(
     user_interests,
     top_n=10
 ):
+
+    user_interests = normalize_interests(user_interests)
 
     user_text = " ".join(user_interests)
 
@@ -161,6 +164,8 @@ def get_recommendations(
     user_interests=None,
     top_n=10
 ):
+
+    user_interests = normalize_interests(user_interests)
 
     if not user_interests:
 
