@@ -32,10 +32,12 @@ class BookRecommendation(BaseModel):
     title: str
     score: float | None
     reason: str
+    source: Literal["interest", "popularity"]
 
 
 class BookRecommendationResponse(BaseModel):
     recommendations: list[BookRecommendation]
+    unmatched_interests: list[str] = Field(default_factory=list)
 
 
 class CommunityRecommendationRequest(BaseModel):

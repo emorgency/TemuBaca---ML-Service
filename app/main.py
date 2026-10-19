@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from app.recommender import get_recommendations
 from app.community import recommend_communities
+from app.text import normalize_interests, unmatched_interests
 
 from app.schemas import (
     BookRecommendationRequest,
@@ -33,7 +34,10 @@ def recommend_books(request: BookRecommendationRequest):
     )
 
     return {
-        "recommendations": recommendations
+        "recommendations": recommendations,
+        "unmatched_interests": unmatched_interests(
+            normalize_interests(request.user_interests)
+        )
     }
 
 @app.post(

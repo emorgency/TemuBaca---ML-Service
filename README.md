@@ -133,22 +133,34 @@ POST /api/recommendations/books
 {
   "recommendations": [
     {
-      "book_id": 1230,
-      "title": "Before They Are Hanged",
-      "score": 0.4329,
-      "reason": "Sesuai dengan minat: fantasy, magic"
+      "book_id": 4712,
+      "title": "Sandry's Book (Circle of Magic, #1)",
+      "score": 0.4838,
+      "reason": "Sesuai dengan minat: fantasy, magic",
+      "source": "interest"
     }
-  ]
+  ],
+  "unmatched_interests": []
 }
 ```
 
+* `source`: `"interest"` jika buku cocok dengan minat (skor > 0), `"popularity"` jika buku ditambahkan dari urutan popularitas. Item `popularity` selalu `score: null`.
+* `unmatched_interests`: minat yang tidak punya satu token pun di vocabulary model, misalnya `["romansa"]`. UI dapat menampilkan "Minat belum dikenali".
+
+### Batas Input
+
+* `user_interests` maksimal 20 item; setiap minat maksimal 50 karakter setelah spasi di tepi dibuang. Melebihi batas menghasilkan `422`.
+* Minat kosong atau hanya spasi diabaikan.
+* Minat dinormalisasi sebelum dipakai: spasi dirapikan, huruf dikecilkan (`casefold`), dan duplikat dibuang. `["Fantasy", "fantasy "]` sama dengan `["fantasy"]`.
+
 ### Cara Kerja
 
-1. Minat pengguna digabung menjadi teks.
+1. Minat pengguna dinormalisasi, lalu digabung menjadi teks.
 2. Teks pengguna diubah menjadi vektor TF-IDF.
 3. Vektor pengguna dibandingkan dengan vektor setiap buku menggunakan cosine similarity.
-4. Buku dengan similarity tertinggi diprioritaskan.
-5. Sistem memberikan alasan rekomendasi berdasarkan minat yang cocok.
+4. Hanya buku dengan skor > 0 yang dipakai, urut dari skor tertinggi. Jika skor sama, urutan mengikuti dataset.
+5. Jika hasil kurang dari `top_n`, sisanya diisi buku populer yang belum terpilih (`source: "popularity"`).
+6. Alasan hanya menyebut minat yang token-nya berbobot > 0 di vektor buku tersebut, memakai analyzer TF-IDF yang sama dengan skor. Minat `"lit"` tidak lagi dianggap cocok hanya karena muncul di dalam kata "literature".
 
 ### Fallback
 
@@ -161,7 +173,7 @@ Jika pengguna belum memiliki minat:
 }
 ```
 
-Sistem menggunakan rekomendasi berdasarkan popularitas buku.
+Sistem menggunakan rekomendasi berdasarkan popularitas buku. Semua item memakai `source: "popularity"`.
 
 ---
 
@@ -254,6 +266,14 @@ Hasil:
 ```text
 10 tests passed
 ```
+
+### Regression
+
+```powershell
+python -m pytest tests/test_regressions.py
+```
+
+Satu test per bug di `docs/BACKEND_PETA_RUTE.md` bagian 13.2.
 
 ---
 
@@ -363,5 +383,5 @@ python -m pytest tests
 Expected result:
 
 ```text
-10 passed
+19 passed
 ```

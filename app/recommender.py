@@ -6,7 +6,7 @@ from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
 from app.model_store import tfidf
-from app.text import normalize_interests
+from app.text import matched_interests, normalize_interests
 
 
 # =========================
@@ -38,31 +38,59 @@ books_ml = pd.read_csv(DATA_PATH)
 book_vectors = joblib.load(BOOK_VECTORS_PATH)
 
 
+# Positional indices of all books, most popular first. The multi-column
+# sort is stable, so ties keep the dataset order.
+popularity_order = books_ml.sort_values(
+    by=[
+        "ratings_count",
+        "average_rating"
+    ],
+    ascending=False
+).index.to_numpy()
+
+POPULARITY_REASON = (
+    "Direkomendasikan berdasarkan "
+    "popularitas buku"
+)
+
+
 # =========================
 # EXPLANATION
 # =========================
 
 def get_reason(user_interests, book_idx):
 
-    book_text = str(
-        books_ml.iloc[book_idx]["combined_text"]
-    ).lower()
+    matched = matched_interests(
+        user_interests,
+        book_vectors[book_idx]
+    )
 
-    matched_interests = []
-
-    for interest in user_interests:
-
-        if interest.lower() in book_text:
-            matched_interests.append(interest)
-
-    if matched_interests:
+    if matched:
 
         return (
             "Sesuai dengan minat: "
-            + ", ".join(matched_interests)
+            + ", ".join(matched)
         )
 
-    return "Memiliki kemiripan dengan minat Anda"
+    return "Sesuai dengan minat Anda"
+
+
+def popularity_item(book_idx):
+
+    return {
+
+        "book_id": int(
+            books_ml.iloc[book_idx]["book_id"]
+        ),
+
+        "title": books_ml.iloc[book_idx]["title"],
+
+        "score": None,
+
+        "reason": POPULARITY_REASON,
+
+        "source": "popularity"
+    }
 
 
 # =========================
@@ -76,6 +104,12 @@ def recommend_books(
 
     user_interests = normalize_interests(user_interests)
 
+    if not user_interests:
+
+        return fallback_recommendations(
+            top_n
+        )
+
     user_text = " ".join(user_interests)
 
     user_vector = tfidf.transform(
@@ -87,13 +121,19 @@ def recommend_books(
         book_vectors
     )[0]
 
-    top_indices = np.argsort(
-        scores
-    )[::-1][:top_n]
+    # Only books whose rounded score is still above zero count as matches,
+    # so no "interest" item is ever shown with score 0.0.
+    rounded = np.round(scores, 4)
+    positive = np.flatnonzero(rounded > 0)
+
+    # Highest score first; equal scores keep the dataset order.
+    picked = positive[
+        np.lexsort((positive, -scores[positive]))
+    ][:top_n]
 
     recommendations = []
 
-    for idx in top_indices:
+    for idx in picked:
 
         recommendations.append({
 
@@ -103,16 +143,29 @@ def recommend_books(
 
             "title": books_ml.iloc[idx]["title"],
 
-            "score": round(
-                float(scores[idx]),
-                4
-            ),
+            "score": float(rounded[idx]),
 
             "reason": get_reason(
                 user_interests,
                 idx
-            )
+            ),
+
+            "source": "interest"
         })
+
+    if len(recommendations) < top_n:
+
+        chosen = {int(idx) for idx in picked}
+
+        for idx in popularity_order:
+
+            if len(recommendations) >= top_n:
+                break
+
+            if int(idx) not in chosen:
+                recommendations.append(
+                    popularity_item(idx)
+                )
 
     return recommendations
 
@@ -125,35 +178,10 @@ def fallback_recommendations(
     top_n=10
 ):
 
-    popular_books = books_ml.sort_values(
-        by=[
-            "ratings_count",
-            "average_rating"
-        ],
-        ascending=False
-    ).head(top_n)
-
-    recommendations = []
-
-    for _, book in popular_books.iterrows():
-
-        recommendations.append({
-
-            "book_id": int(
-                book["book_id"]
-            ),
-
-            "title": book["title"],
-
-            "score": None,
-
-            "reason": (
-                "Direkomendasikan berdasarkan "
-                "popularitas buku"
-            )
-        })
-
-    return recommendations
+    return [
+        popularity_item(idx)
+        for idx in popularity_order[:top_n]
+    ]
 
 
 # =========================
