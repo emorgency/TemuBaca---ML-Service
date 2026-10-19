@@ -1,0 +1,27 @@
+{
+  "source_repo": "https://github.com/cahyadsn/wilayah",
+  "source_commit": "d68e8d5516f969d1905d0b2940f20034becb0db7",
+  "source_file": "db/wilayah.sql",
+  "source_license": "MIT",
+  "regulation": "Kepmendagri No. 300.2.2-2138 Tahun 2025, diubah dengan Kepmendagri No. 300.2.2-2430 Tahun 2025",
+  "downloaded_at": "2026-10-19",
+  "province_count": 38,
+  "kabkota_count": 514,
+  "official_source": {
+    "kepmendagri_2430_pdf": "https://ditjenbinaadwil.kemendagri.go.id/download/file/Kepmen_Perubahan_300.2.2-2430.pdf",
+    "kepmendagri_2138_pdf": null,
+    "kepmendagri_2138_note": "Tidak ditemukan unduhan resmi lampiran 2138 di domain kemendagri.go.id (dicek 2026-10-19)."
+  },
+  "verification": {
+    "checked_at": "2026-10-19",
+    "against": "Lampiran Kepmendagri No. 300.2.2-2430 Tahun 2025 (PDF hasil pindai, dibaca manual)",
+    "results": [
+      "Rekapitulasi huruf A: 38 kode dan nama provinsi serta jumlah kabupaten dan kota per provinsi (total 416 kabupaten, 98 kota) sama dengan tabel ini.",
+      "Huruf D.b.1 dan D.b.2: 33 kode dan nama kab/kota di Aceh dan Sumatera Utara sama dengan tabel ini.",
+      "Diktum KESATU perubahan 2430 hanya mengubah data Aceh dan Sumatera Utara terkait empat pulau; tidak ada kode kab/kota yang berubah."
+    ],
+    "not_verified": [
+      "Nama dan kode kab/kota di luar Aceh dan Sumatera Utara (termasuk Banten, DKI Jakarta, Jawa Barat) belum dicocokkan per baris dengan lampiran resmi 2138, karena lampiran itu tidak tersedia dari sumber resmi. Jumlah per provinsi sudah cocok."
+    ]
+  }
+}
