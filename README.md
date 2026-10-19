@@ -24,6 +24,8 @@ Metode yang digunakan:
 ml-service/
 ├── app/
 │   ├── main.py
+│   ├── config.py
+│   ├── model_store.py
 │   ├── recommender.py
 │   ├── community.py
 │   └── schemas.py
@@ -34,7 +36,8 @@ ml-service/
 │
 ├── models/
 │   ├── tfidf_vectorizer.joblib
-│   └── book_vectors.joblib
+│   ├── book_vectors.joblib
+│   └── meta.json
 │
 ├── notebooks/
 │   └── 01_exploration.ipynb
@@ -43,13 +46,37 @@ ml-service/
 │   ├── test_recommender.py
 │   └── test_community.py
 │
+├── docs/
+│   └── BACKEND_PETA_RUTE.md
+│
 ├── requirements.txt
+├── requirements-dev.txt
+├── pytest.ini
+├── .env.example
+├── .python-version
 └── README.md
 ```
 
 ---
 
 ## 3. Menjalankan Service
+
+### Prasyarat
+
+* Python **3.14** (lihat `.python-version`). Test sudah lulus di Python 3.14.7; versi lain belum diuji.
+* Model di `models/` dibuat dengan scikit-learn 1.9.1 (lihat `models/meta.json`). Test gagal jika versi scikit-learn berbeda.
+
+Pasang dependensi:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements-dev.txt
+```
+
+`requirements.txt` berisi dependensi runtime. `requirements-dev.txt` menambahkan `pytest` dan `networkx` untuk test.
+
+Salin `.env.example` menjadi `.env` bila perlu mengubah konfigurasi. Semua nilai punya default, jadi service tetap jalan tanpa `.env`.
 
 Pastikan berada di root project:
 
