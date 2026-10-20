@@ -1,0 +1,10 @@
+{
+  "file": "stopwords_id.txt",
+  "source_repo": "https://github.com/stopwords-iso/stopwords-id",
+  "source_commit": "6109494eb4cfebd75c59bd832848374d02f4e907",
+  "source_file": "stopwords-id.txt",
+  "source_license": "MIT (Copyright (c) 2016 Gene Diaz)",
+  "downloaded_at": "2026-10-20",
+  "word_count": 757,
+  "note": "Indonesian stop words for the TF-IDF analyzer; combined with scikit-learn's English list by app/training.py."
+}

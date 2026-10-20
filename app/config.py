@@ -15,11 +15,19 @@ class Settings(BaseSettings):
     )
 
     app_env: str = "development"
+    model_dir: Path = Path("models")
     graph_dir: Path = Path("data/graphs")
     routing_graphs: str = ""
     snap_max_m: float = 300
     route_cache_size: int = 1000
     internal_token: str = ""
+
+    @property
+    def model_path(self) -> Path:
+        """Absolute model directory; relative values resolve from the repo root."""
+        if self.model_dir.is_absolute():
+            return self.model_dir
+        return BASE_DIR / self.model_dir
 
     @property
     def graph_path(self) -> Path:

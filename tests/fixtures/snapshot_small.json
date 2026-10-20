@@ -1,0 +1,607 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-20T00:00:00.000Z",
+  "books": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "title": "Buku Uji Naga",
+      "authors": [
+        "Penulis Uji A"
+      ],
+      "description": "A fantasy adventure about magic and dragons.",
+      "categories": [
+        "Fantasy fiction",
+        "Magic"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 9,
+      "listingCount": 2,
+      "genres": [
+        "Fiksi Sastra"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "title": "Buku Uji Penyihir",
+      "authors": [
+        "Penulis Uji B"
+      ],
+      "description": "Magic school fantasy for young readers.",
+      "categories": [
+        "Fantasy",
+        "Wizards"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 7,
+      "listingCount": 1,
+      "genres": [
+        "Fiksi Sastra"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "title": "Buku Uji Detektif",
+      "authors": [
+        "Penulis Uji C"
+      ],
+      "description": "A detective solves a crime in a quiet town; a mystery thriller.",
+      "categories": [
+        "Mystery fiction",
+        "Crime"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 5,
+      "listingCount": 0,
+      "genres": [
+        "Fiksi Sastra"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "title": "Buku Uji Cinta",
+      "authors": [
+        "Penulis Uji D"
+      ],
+      "description": "A love story and a romance novel.",
+      "categories": [
+        "Romance",
+        "Love stories"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 4,
+      "listingCount": 3,
+      "genres": [
+        "Fiksi Sastra",
+        "Romansa"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "title": "Buku Uji Revolusi",
+      "authors": [
+        "Pramoedya Uji"
+      ],
+      "description": "Kisah sejarah pergerakan di Hindia Belanda.",
+      "categories": [
+        "Historical fiction",
+        "Indonesian fiction"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 8,
+      "listingCount": 1,
+      "genres": [
+        "Sastra Indonesia",
+        "Fiksi Sastra",
+        "Fiksi Sejarah"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "title": "Buku Uji Kerajaan",
+      "authors": [
+        "Penulis Uji E"
+      ],
+      "description": "Sejarah kerajaan maritim nusantara.",
+      "categories": [
+        "History"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 2,
+      "listingCount": 0,
+      "genres": [
+        "Sejarah",
+        "Nonfiksi"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "title": "Buku Uji Sains",
+      "authors": [
+        "Penulis Uji F"
+      ],
+      "description": "Popular science and technology for curious readers.",
+      "categories": [
+        "Science",
+        "Technology"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 3,
+      "listingCount": 2,
+      "genres": [
+        "Nonfiksi"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "title": "Buku Uji Sekolah",
+      "authors": [
+        "Penulis Uji G"
+      ],
+      "description": "Education and literacy in rural schools.",
+      "categories": [
+        "Education"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 1,
+      "listingCount": 0,
+      "genres": [
+        "Pendidikan",
+        "Nonfiksi"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000009",
+      "title": "Buku Uji Sajak",
+      "authors": [
+        "Penulis Uji H"
+      ],
+      "description": "Kumpulan puisi tentang hujan dan kota.",
+      "categories": [
+        "Puisi"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 6,
+      "listingCount": 0,
+      "genres": [
+        "Puisi"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000010",
+      "title": "Buku Uji Keluarga",
+      "authors": [
+        "Penulis Uji I"
+      ],
+      "description": "Cerita keluarga dan persahabatan di kampung.",
+      "categories": [
+        "Family",
+        "Friendship"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 1,
+      "genres": [
+        "Keluarga",
+        "Persahabatan"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000011",
+      "title": "Buku Uji Jiwa",
+      "authors": [
+        "Penulis Uji J"
+      ],
+      "description": "Panduan kesehatan mental sehari-hari.",
+      "categories": [
+        "Mental health"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": [
+        "Kesehatan Mental",
+        "Nonfiksi"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000012",
+      "title": "Buku Uji Pikiran",
+      "authors": [
+        "Penulis Uji K"
+      ],
+      "description": "Pengantar filsafat untuk pemula.",
+      "categories": [
+        "Philosophy"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": [
+        "Filsafat"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000013",
+      "title": "Buku Uji Tokoh",
+      "authors": [
+        "Penulis Uji L"
+      ],
+      "description": "Biografi seorang guru di pedalaman.",
+      "categories": [
+        "Biography"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 2,
+      "genres": [
+        "Biografi",
+        "Nonfiksi"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000014",
+      "title": "Buku Uji Bocah",
+      "authors": [
+        "Penulis Uji M"
+      ],
+      "description": "Petualangan anak-anak mencari harta karun.",
+      "categories": [
+        "Juvenile fiction"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 2,
+      "listingCount": 0,
+      "genres": [
+        "Anak & Remaja"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000015",
+      "title": "Buku Uji Doa",
+      "authors": [
+        "Penulis Uji N"
+      ],
+      "description": "Renungan spiritual untuk setiap hari.",
+      "categories": [
+        "Spirituality"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": [
+        "Agama & Spiritualitas"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000016",
+      "title": "Buku Uji Gambar",
+      "authors": [
+        "Penulis Uji O"
+      ],
+      "description": "Komik tentang kucing yang bisa terbang.",
+      "categories": [
+        "Comics"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 1,
+      "listingCount": 1,
+      "genres": [
+        "Komik & Novel Grafis"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000017",
+      "title": "Buku Uji Kota",
+      "authors": [
+        "Penulis Uji P"
+      ],
+      "description": "Potret kemiskinan dan isu sosial di kota besar.",
+      "categories": [
+        "Poverty",
+        "Social conditions"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": [
+        "Isu Sosial"
+      ]
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000018",
+      "title": "Buku Uji Laut",
+      "authors": [
+        "Penulis Uji Q"
+      ],
+      "description": "Seorang nelayan dan laut yang luas.",
+      "categories": [
+        "Sea stories"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000019",
+      "title": "Buku Uji Gunung",
+      "authors": [
+        "Penulis Uji R"
+      ],
+      "description": "Pendakian gunung bersama teman lama.",
+      "categories": [
+        "Mountaineering"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000020",
+      "title": "Buku Uji Kopi",
+      "authors": [
+        "Penulis Uji S"
+      ],
+      "description": "Sejarah kopi dari kebun ke cangkir.",
+      "categories": [
+        "Coffee"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000021",
+      "title": "Buku Uji Kereta",
+      "authors": [
+        "Penulis Uji T"
+      ],
+      "description": "Perjalanan kereta melintasi pulau.",
+      "categories": [
+        "Railroads"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000022",
+      "title": "Buku Uji Pasar",
+      "authors": [
+        "Penulis Uji U"
+      ],
+      "description": "Ekonomi pasar tradisional.",
+      "categories": [
+        "Economics"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000023",
+      "title": "Buku Uji Hutan",
+      "authors": [
+        "Penulis Uji V"
+      ],
+      "description": "Hutan hujan dan satwa langka.",
+      "categories": [
+        "Forests"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": []
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000024",
+      "title": "Buku Uji Bintang",
+      "authors": [
+        "Penulis Uji W"
+      ],
+      "description": "Mengenal bintang dan planet.",
+      "categories": [
+        "Astronomy"
+      ],
+      "language": "id",
+      "publisher": null,
+      "publishedAt": null,
+      "isbn": null,
+      "provider": "MANUAL",
+      "updatedAt": "2026-10-20T00:00:00.000Z",
+      "bookmarkCount": 0,
+      "listingCount": 0,
+      "genres": []
+    }
+  ],
+  "communities": [],
+  "genres": [
+    {
+      "slug": "sastra-indonesia",
+      "label": "Sastra Indonesia"
+    },
+    {
+      "slug": "fiksi-sastra",
+      "label": "Fiksi Sastra"
+    },
+    {
+      "slug": "fiksi-sejarah",
+      "label": "Fiksi Sejarah"
+    },
+    {
+      "slug": "sejarah",
+      "label": "Sejarah"
+    },
+    {
+      "slug": "romansa",
+      "label": "Romansa"
+    },
+    {
+      "slug": "keluarga",
+      "label": "Keluarga"
+    },
+    {
+      "slug": "persahabatan",
+      "label": "Persahabatan"
+    },
+    {
+      "slug": "pendidikan",
+      "label": "Pendidikan"
+    },
+    {
+      "slug": "isu-sosial",
+      "label": "Isu Sosial"
+    },
+    {
+      "slug": "kesehatan-mental",
+      "label": "Kesehatan Mental"
+    },
+    {
+      "slug": "puisi",
+      "label": "Puisi"
+    },
+    {
+      "slug": "nonfiksi",
+      "label": "Nonfiksi"
+    },
+    {
+      "slug": "filsafat",
+      "label": "Filsafat"
+    },
+    {
+      "slug": "biografi",
+      "label": "Biografi"
+    },
+    {
+      "slug": "anak-remaja",
+      "label": "Anak & Remaja"
+    },
+    {
+      "slug": "agama-spiritualitas",
+      "label": "Agama & Spiritualitas"
+    },
+    {
+      "slug": "komik-novel-grafis",
+      "label": "Komik & Novel Grafis"
+    }
+  ]
+}
