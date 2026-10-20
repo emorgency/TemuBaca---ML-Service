@@ -28,30 +28,31 @@ ml-service/
 │   ├── model_store.py
 │   ├── region.py
 │   ├── text.py
+│   ├── training.py
 │   ├── recommender.py
 │   ├── community.py
 │   └── schemas.py
 │
 ├── data/
-│   ├── raw/
-│   ├── processed/
 │   └── reference/
 │
 ├── scripts/
-│   └── build_region_table.py
+│   ├── build_region_table.py
+│   └── train_tfidf.py
 │
 ├── models/
 │   ├── tfidf_vectorizer.joblib
 │   ├── book_vectors.joblib
+│   ├── catalog_books.csv
 │   └── meta.json
-│
-├── notebooks/
-│   └── 01_exploration.ipynb
 │
 ├── tests/
 │   ├── test_recommender.py
 │   ├── test_community.py
-│   └── test_regressions.py
+│   ├── test_regressions.py
+│   ├── test_training.py
+│   ├── conftest.py
+│   └── fixtures/snapshot_small.json
 │
 ├── docs/
 │   └── BACKEND_PETA_RUTE.md
