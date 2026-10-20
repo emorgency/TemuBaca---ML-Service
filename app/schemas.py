@@ -33,7 +33,7 @@ class BookRecommendationRequest(BaseModel):
 
 
 class BookRecommendation(BaseModel):
-    book_id: int
+    book_id: str
     title: str
     score: float | None
     reason: str

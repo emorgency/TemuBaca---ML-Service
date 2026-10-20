@@ -53,15 +53,38 @@ def test_b6_limits_are_inclusive_and_blanks_are_dropped():
 def test_b1_unknown_interests_fall_back_to_popularity():
     response = client.post(
         "/api/recommendations/books",
-        json={"user_interests": ["romansa", "horor"], "top_n": 5},
+        json={"user_interests": ["horor", "kuliner"], "top_n": 5},
     )
     body = response.json()
 
     assert response.status_code == 200
-    assert body["unmatched_interests"] == ["romansa", "horor"]
+    assert body["unmatched_interests"] == ["horor", "kuliner"]
     assert len(body["recommendations"]) == 5
     assert all(item["source"] == "popularity" for item in body["recommendations"])
     assert all(item["score"] is None for item in body["recommendations"])
+
+
+def test_b1_site_genre_labels_are_recognized():
+    # "Romansa" is a site genre label; training adds labels to the book text.
+    response = client.post(
+        "/api/recommendations/books",
+        json={"user_interests": ["Romansa"], "top_n": 3},
+    )
+    body = response.json()
+
+    assert body["unmatched_interests"] == []
+    assert body["recommendations"][0]["source"] == "interest"
+    assert body["recommendations"][0]["reason"] == "Sesuai dengan minat: romansa"
+
+
+def test_b1_popularity_follows_bookmarks_then_listings():
+    from app.recommender import fallback_recommendations
+
+    titles = [item["title"] for item in fallback_recommendations(top_n=4)]
+
+    # Fixture counts (bookmarks, listings): Naga (9, 2), Revolusi (8, 1),
+    # Penyihir (7, 1), Sajak (6, 0).
+    assert titles == ["Buku Uji Naga", "Buku Uji Revolusi", "Buku Uji Penyihir", "Buku Uji Sajak"]
 
 
 def test_b1_sparse_matches_are_topped_up_without_duplicates():
@@ -90,7 +113,7 @@ def test_b2_reasons_match_tokens_not_substrings():
     from app.recommender import book_vectors, books_ml
     from app.text import interest_token_ids
 
-    row_of = {int(book_id): idx for idx, book_id in enumerate(books_ml["book_id"])}
+    row_of = {book_id: idx for idx, book_id in enumerate(books_ml["book_id"])}
 
     for interests in (["lit"], ["lit", "fantasy"], ["sejarah", "magic"]):
         for item in get_recommendations(interests, top_n=20):
@@ -192,11 +215,11 @@ def test_b4_no_interests_and_no_location_returns_notice():
 
 
 def test_b4_only_positive_scores_are_returned():
-    body = post_communities({"user_interests": ["fantasy", "romansa"], "top_n": 5}).json()
+    body = post_communities({"user_interests": ["fantasy", "horor"], "top_n": 5}).json()
 
     assert body["recommendations"]
     assert all(item["score"] > 0 for item in body["recommendations"])
-    assert body["unmatched_interests"] == ["romansa"]
+    assert body["unmatched_interests"] == ["horor"]
     assert body["notice"] is None
 
 

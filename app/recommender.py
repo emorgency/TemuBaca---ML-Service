@@ -1,52 +1,25 @@
-import joblib
 import numpy as np
-import pandas as pd
 
-from pathlib import Path
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.model_store import tfidf
+from app.model_store import book_vectors, catalog, tfidf
 from app.text import matched_interests, normalize_interests
 
 
 # =========================
-# PROJECT PATH
+# CATALOG
 # =========================
 
-BASE_DIR = Path(__file__).resolve().parent.parent
+# Kept under this name for callers that read book rows by position.
+books_ml = catalog
 
-DATA_PATH = (
-    BASE_DIR
-    / "data"
-    / "processed"
-    / "books_processed.csv"
+
+# Positional indices of all books, most popular first (bookmarks, then
+# listings, then id; ranked at training time).
+popularity_order = np.argsort(
+    catalog["popularity_rank"].to_numpy(),
+    kind="stable"
 )
-
-BOOK_VECTORS_PATH = (
-    BASE_DIR
-    / "models"
-    / "book_vectors.joblib"
-)
-
-
-# =========================
-# LOAD DATA & MODEL
-# =========================
-
-books_ml = pd.read_csv(DATA_PATH)
-
-book_vectors = joblib.load(BOOK_VECTORS_PATH)
-
-
-# Positional indices of all books, most popular first. The multi-column
-# sort is stable, so ties keep the dataset order.
-popularity_order = books_ml.sort_values(
-    by=[
-        "ratings_count",
-        "average_rating"
-    ],
-    ascending=False
-).index.to_numpy()
 
 POPULARITY_REASON = (
     "Direkomendasikan berdasarkan "
@@ -79,7 +52,7 @@ def popularity_item(book_idx):
 
     return {
 
-        "book_id": int(
+        "book_id": str(
             books_ml.iloc[book_idx]["book_id"]
         ),
 
@@ -137,7 +110,7 @@ def recommend_books(
 
         recommendations.append({
 
-            "book_id": int(
+            "book_id": str(
                 books_ml.iloc[idx]["book_id"]
             ),
 

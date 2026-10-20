@@ -140,10 +140,10 @@ POST /api/recommendations/books
 {
   "recommendations": [
     {
-      "book_id": 4712,
-      "title": "Sandry's Book (Circle of Magic, #1)",
-      "score": 0.4838,
-      "reason": "Sesuai dengan minat: fantasy, magic",
+      "book_id": "927fb32b-5e53-4c6c-8ee4-df8bb87b212a",
+      "title": "Sejarah sastra Indonesia",
+      "score": 0.5541,
+      "reason": "Sesuai dengan minat: sejarah, sastra indonesia",
       "source": "interest"
     }
   ],
@@ -151,8 +151,9 @@ POST /api/recommendations/books
 }
 ```
 
+* `book_id`: UUID buku di katalog TemuBaca (`books.id`).
 * `source`: `"interest"` jika buku cocok dengan minat (skor > 0), `"popularity"` jika buku ditambahkan dari urutan popularitas. Item `popularity` selalu `score: null`.
-* `unmatched_interests`: minat yang tidak punya satu token pun di vocabulary model, misalnya `["romansa"]`. UI dapat menampilkan "Minat belum dikenali".
+* `unmatched_interests`: minat yang tidak punya satu token pun di vocabulary model, misalnya `["horor"]` selama belum ada buku bergenre itu. UI dapat menampilkan "Minat belum dikenali".
 
 ### Batas Input
 
@@ -165,8 +166,8 @@ POST /api/recommendations/books
 1. Minat pengguna dinormalisasi, lalu digabung menjadi teks.
 2. Teks pengguna diubah menjadi vektor TF-IDF.
 3. Vektor pengguna dibandingkan dengan vektor setiap buku menggunakan cosine similarity.
-4. Hanya buku dengan skor > 0 yang dipakai, urut dari skor tertinggi. Jika skor sama, urutan mengikuti dataset.
-5. Jika hasil kurang dari `top_n`, sisanya diisi buku populer yang belum terpilih (`source: "popularity"`).
+4. Hanya buku dengan skor > 0 yang dipakai, urut dari skor tertinggi. Jika skor sama, urutan mengikuti `book_id`.
+5. Jika hasil kurang dari `top_n`, sisanya diisi buku populer yang belum terpilih (`source: "popularity"`). Popularitas = jumlah bookmark, lalu jumlah listing aktif, lalu `book_id`.
 6. Alasan hanya menyebut minat yang token-nya berbobot > 0 di vektor buku tersebut, memakai analyzer TF-IDF yang sama dengan skor. Minat `"lit"` tidak lagi dianggap cocok hanya karena muncul di dalam kata "literature".
 
 ### Fallback
@@ -273,7 +274,7 @@ Breaking change dibanding versi awal:
 * Response item: tambah `region_code` dan `region_name`.
 * Response: tambah `unmatched_interests` dan `notice`; daftar bisa kosong.
 * Komunitas berskor 0 tidak lagi dikembalikan.
-* Rekomendasi buku (aditif): item tambah `source`, response tambah `unmatched_interests`, buku berskor 0 diganti buku populer.
+* Rekomendasi buku: `book_id` kini UUID string TemuBaca (sebelumnya integer Goodbooks; breaking). Item tambah `source`, response tambah `unmatched_interests`, buku berskor 0 diganti buku populer.
 
 `API_SPEC.md` di repo website perlu diperbarui, termasuk metode `POST`.
 
@@ -308,7 +309,7 @@ Hasil:
 ### Total
 
 ```text
-29 tests passed
+38 tests passed
 ```
 
 ### Regression
@@ -321,17 +322,11 @@ Satu test per bug di `docs/BACKEND_PETA_RUTE.md` bagian 13.2.
 
 ---
 
-## 7. Dataset
+## 7. Data Katalog
 
-Baseline recommendation menggunakan dataset **Goodbooks-10k**.
+Model dilatih dari **snapshot katalog TemuBaca** (endpoint `GET /api/internal/ml/snapshot` di website, atau file dari `bun run ml:snapshot -- --out <file>`). Snapshot hanya berisi data publik: judul, penulis, deskripsi, subjek provider, label genre situs, serta jumlah bookmark dan listing per buku.
 
-Data yang digunakan:
-
-* `books.csv`
-* `book_tags.csv`
-* `tags.csv`
-
-Dataset digunakan sebagai data pengembangan/baseline dan tidak dianggap sebagai representasi penuh preferensi pembaca Indonesia.
+File snapshot **tidak** di-commit. Yang di-commit hanya artefak model dan `models/catalog_books.csv` (`book_id`, `title`, `popularity_rank`).
 
 ---
 
@@ -342,11 +337,11 @@ Model recommendation menggunakan pendekatan **content-based recommendation**.
 ### Alur Model
 
 ```text
-Book Metadata
+Snapshot katalog TemuBaca
      ↓
-Combined Text
+Judul + penulis + subjek + label genre + deskripsi
      ↓
-TF-IDF
+TF-IDF (stop word Inggris + Indonesia)
      ↓
 Book Vectors
      ↓
@@ -355,41 +350,59 @@ Cosine Similarity
 Recommendation Ranking
 ```
 
-Model yang disimpan:
+Label genre situs (misalnya "Romansa", "Sastra Indonesia") ikut masuk ke teks buku, sehingga minat yang dipilih pengguna di website cocok dengan buku yang subjek providernya berbahasa Inggris.
+
+### Analyzer
+
+* `lowercase`, `strip_accents="unicode"`, `sublinear_tf=True`, tanpa stemming.
+* Stop word: daftar Inggris scikit-learn + `data/reference/stopwords_id.txt` dari [stopwords-iso/stopwords-id](https://github.com/stopwords-iso/stopwords-id) (MIT, commit di-pin; lihat `stopwords_meta.json`). Entri berstrip seperti "baik-baiknya" dilewati.
+* Training gagal jika stop word membuang token dari label genre situs.
+
+### Melatih Ulang
+
+```powershell
+# Di repo website: tulis snapshot (tambahkan --cloud untuk production)
+bun run ml:snapshot -- --out snapshot.json
+
+# Di repo ini
+python scripts/train_tfidf.py --from-file snapshot.json
+```
+
+Atau langsung dari endpoint website dengan `TEMUBACA_SNAPSHOT_URL` dan `ML_SNAPSHOT_SECRET`:
+
+```powershell
+python scripts/train_tfidf.py
+```
+
+Artefak ditulis ke `models/`:
 
 ```text
 models/tfidf_vectorizer.joblib
 models/book_vectors.joblib
+models/catalog_books.csv
+models/meta.json
 ```
+
+`models/meta.json` mencatat versi model, waktu snapshot, jumlah buku, ukuran vocabulary, versi scikit-learn, dan genre situs yang belum punya buku. Setelah melatih ulang, jalankan test lalu commit artefaknya.
+
+`MODEL_DIR` (default `models`) menentukan folder model yang dimuat service. Test memakai model dari `tests/fixtures/snapshot_small.json` (data buatan), jadi hasil test tidak bergantung pada isi katalog production.
 
 ---
 
 ## 9. Integration Notes
 
-ML Service saat ini menggunakan `book_id` dari dataset Goodbooks-10k.
-
-`book_id` tersebut belum sama dengan `Book.id` UUID pada database TemuBaca.
-
-Oleh karena itu, sebelum production integration diperlukan mapping:
-
-```text
-Goodbooks book_id
-       ↓
-Book identifier TemuBaca
-       ↓
-Book.id UUID
-```
-
-Community ID seperti `C001`, `C002`, `C003`, dan seterusnya juga masih merupakan data demo ML dan perlu diganti atau dihubungkan dengan ID community dari database TemuBaca.
+* `book_id` adalah UUID buku TemuBaca, jadi website bisa langsung mencocokkan hasil dengan `books.id`.
+* Buku baru di website baru ikut direkomendasikan setelah model dilatih ulang.
+* Community ID seperti `C001`, `C002`, dan seterusnya masih data demo ML dan perlu diganti dengan komunitas dari snapshot (ML-T05).
 
 ---
 
 ## 10. Limitations
 
-* Goodbooks-10k digunakan sebagai baseline dan bukan representasi khusus pengguna Indonesia.
-* Rekomendasi buku saat ini berbasis metadata/minat, bukan collaborative filtering.
+* Rekomendasi buku berbasis metadata/minat, bukan collaborative filtering.
 * Belum menggunakan histori interaksi pengguna sebagai model utama.
-* Mapping Goodbooks `book_id` ke `Book.id` TemuBaca belum tersedia.
+* Popularitas hanya dari jumlah bookmark dan listing; selama keduanya nol, urutan cadangan mengikuti `book_id`.
+* Tanpa stemming: "romantis" dan "romansa" dianggap kata berbeda.
 * Data community saat ini masih berupa data demo.
 * Nilai cosine similarity merupakan skor kemiripan, bukan persentase akurasi.
 
@@ -407,12 +420,7 @@ Community ID seperti `C001`, `C002`, `C003`, dan seterusnya juga masih merupakan
 
 ## 12. Model Version
 
-**Current Model:**
-
-```text
-TF-IDF Content-Based Recommendation
-Version: 1.0
-```
+Versi model yang sedang dipakai ada di `models/meta.json` (`model_version`, misalnya `temubaca-20261020082721`).
 
 ---
 
@@ -427,5 +435,5 @@ python -m pytest tests
 Expected result:
 
 ```text
-29 passed
+38 passed
 ```

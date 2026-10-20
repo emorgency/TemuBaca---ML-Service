@@ -1,14 +1,26 @@
 {
   "model": "TF-IDF content-based recommendation",
-  "version": "1.0",
-  "source": "notebooks/01_exploration.ipynb (no training script yet)",
-  "artifacts": {
-    "tfidf_vectorizer.joblib": "TfidfVectorizer(max_features=10000, stop_words='english')",
-    "book_vectors.joblib": "csr_matrix, 10000 books x 10000 features"
+  "model_version": "temubaca-20261020082721",
+  "source": "scripts/train_tfidf.py (app/training.py)",
+  "trained_at": "2026-10-20T08:27:21+00:00",
+  "snapshot_version": 1,
+  "snapshot_generated_at": "2026-10-20T08:27:11.210Z",
+  "book_count": 330,
+  "vocabulary_size": 4862,
+  "analyzer": {
+    "lowercase": true,
+    "strip_accents": "unicode",
+    "sublinear_tf": true,
+    "stop_words": "scikit-learn English + data/reference/stopwords_id.txt",
+    "stop_word_count": 1053,
+    "stopwords_id_source_commit": "6109494eb4cfebd75c59bd832848374d02f4e907"
   },
-  "dataset": "Goodbooks-10k (data/processed/books_processed.csv)",
+  "genres_missing_from_vocabulary": [],
+  "artifacts": [
+    "tfidf_vectorizer.joblib",
+    "book_vectors.joblib",
+    "catalog_books.csv"
+  ],
   "scikit_learn_version": "1.9.1",
-  "scikit_learn_version_evidence": "Loads under scikit-learn 1.9.1 without InconsistentVersionWarning (checked 2026-10-19, Python 3.14.7).",
-  "created_at": null,
-  "created_at_note": "Exact creation date not recorded. Artifacts first committed in 5d5f357 on 2026-10-04."
+  "python_version": "3.14.7"
 }
