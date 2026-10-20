@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +22,14 @@ class Settings(BaseSettings):
     snap_max_m: float = 300
     route_cache_size: int = 1000
     internal_token: str = ""
+
+    @field_validator("internal_token")
+    @classmethod
+    def long_enough_token(cls, token):
+        token = token.strip()
+        if token and len(token) < 32:
+            raise ValueError("INTERNAL_TOKEN must be at least 32 characters")
+        return token
 
     @property
     def model_path(self) -> Path:

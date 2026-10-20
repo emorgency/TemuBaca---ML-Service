@@ -29,6 +29,7 @@ ml-service/
 │   ├── region.py
 │   ├── text.py
 │   ├── training.py
+│   ├── security.py
 │   ├── recommender.py
 │   ├── community.py
 │   └── schemas.py
@@ -51,6 +52,7 @@ ml-service/
 │   ├── test_community.py
 │   ├── test_regressions.py
 │   ├── test_training.py
+│   ├── test_security.py
 │   ├── conftest.py
 │   └── fixtures/snapshot_small.json
 │
@@ -84,7 +86,21 @@ pip install -r requirements-dev.txt
 
 `requirements.txt` berisi dependensi runtime. `requirements-dev.txt` menambahkan `pytest` dan `networkx` untuk test.
 
-Salin `.env.example` menjadi `.env` bila perlu mengubah konfigurasi. Semua nilai punya default, jadi service tetap jalan tanpa `.env`.
+Salin `.env.example` menjadi `.env`, lalu isi `INTERNAL_TOKEN` (minimal 32 karakter):
+
+```powershell
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+### Token Internal
+
+Semua endpoint `/api/*` wajib mengirim header `X-Internal-Token` yang sama dengan `INTERNAL_TOKEN`:
+
+* Token salah atau tidak ada: `401`.
+* `INTERNAL_TOKEN` kosong: semua `/api/*` membalas `503` (fail-closed). `/health` tetap terbuka.
+* Token kurang dari 32 karakter: service gagal start.
+
+Website TemuBaca mengirim token ini dari env `RECOMMENDATION_API_KEY`, jadi nilai keduanya harus sama. Service ini hanya dipanggil server ke server: tidak ada CORS, dan body request `/api/*` lebih dari 8 KB ditolak dengan `413`.
 
 Pastikan berada di root project:
 
@@ -310,7 +326,7 @@ Hasil:
 ### Total
 
 ```text
-38 tests passed
+45 tests passed
 ```
 
 ### Regression
@@ -413,9 +429,9 @@ models/meta.json
 
 | Method | Endpoint                           | Fungsi                  |
 | ------ | ---------------------------------- | ----------------------- |
-| GET    | `/health`                          | Mengecek status service |
-| POST   | `/api/recommendations/books`       | Rekomendasi buku        |
-| POST   | `/api/recommendations/communities` | Rekomendasi komunitas   |
+| GET    | `/health`                          | Status service, `model_version`, `book_count` (tanpa token) |
+| POST   | `/api/recommendations/books`       | Rekomendasi buku (token) |
+| POST   | `/api/recommendations/communities` | Rekomendasi komunitas (token) |
 
 ---
 
@@ -436,5 +452,5 @@ python -m pytest tests
 Expected result:
 
 ```text
-38 passed
+45 passed
 ```

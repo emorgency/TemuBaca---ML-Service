@@ -4,9 +4,10 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.recommender import get_recommendations
+from tests.conftest import TEST_TOKEN
 
 
-client = TestClient(app)
+client = TestClient(app, headers={"X-Internal-Token": TEST_TOKEN})
 
 
 # B-5: interests are normalized before scoring and in reasons.
