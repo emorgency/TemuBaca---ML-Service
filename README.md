@@ -59,6 +59,9 @@ ml-service/
 ├── docs/
 │   └── BACKEND_PETA_RUTE.md
 │
+├── pyproject.toml
+├── uv.lock
+├── .fastapicloudignore
 ├── requirements.txt
 ├── requirements-dev.txt
 ├── pytest.ini
@@ -422,6 +425,36 @@ models/meta.json
 * Tanpa stemming: "romantis" dan "romansa" dianggap kata berbeda.
 * Data community saat ini masih berupa data demo.
 * Nilai cosine similarity merupakan skor kemiripan, bukan persentase akurasi.
+
+---
+
+## 10a. Deploy ke FastAPI Cloud
+
+Konfigurasi deploy ada di `pyproject.toml`:
+
+* `requires-python = "==3.14.*"` dan dependensi runtime dengan versi tetap, dikunci di `uv.lock`. scikit-learn harus tetap 1.9.1 selama model dibuat dengan versi itu.
+* `[tool.fastapi] entrypoint = "app.main:app"`, sehingga `fastapi run` dan `fastapi deploy` tidak butuh argumen path.
+* `.fastapicloudignore` mengecualikan `tests/`, `docs/`, `scripts/`, dan `requirements-dev.txt`. `models/` dan `data/reference/` ikut diunggah.
+
+`requirements.txt` tetap dipakai untuk instalasi pip lokal. Bila menambah atau menaikkan dependensi, ubah `pyproject.toml`, jalankan `uv lock`, dan samakan versinya di `requirements.txt`.
+
+Langkah deploy (dijalankan pemilik akun):
+
+```powershell
+fastapi login
+fastapi deploy
+fastapi cloud env set INTERNAL_TOKEN --secret
+fastapi deploy
+```
+
+Setelah deploy, cek:
+
+* `GET /health` membalas `200` dengan `model_version` yang sama seperti `models/meta.json`.
+* `POST /api/recommendations/books` tanpa token membalas `401`, dan dengan token membalas `200`.
+
+Lalu isi `RECOMMENDATION_API_URL` (URL aplikasi) dan `RECOMMENDATION_API_KEY` (nilai `INTERNAL_TOKEN`) di environment Vercel website.
+
+**Cold start.** Paket Hobby memakai scale-to-zero, jadi request pertama setelah idle menunggu service start. Pengukuran lokal (Windows, 20 Okt 2026): `import app.main` 9–10 detik pada venv yang hangat, terbesar dari `sklearn.metrics.pairwise` (±5 detik) dan `pandas` (±3 detik); request setelah siap 30–108 ms. Angka di FastAPI Cloud belum diukur. Selama start lebih lama dari batas waktu klien website (3 detik), request itu memakai rekomendasi baseline.
 
 ---
 

@@ -1,0 +1,28 @@
+[project]
+name = "temubaca-ml"
+version = "1.0.0"
+description = "Recommendation service for TemuBaca"
+readme = "README.md"
+# Models are pickled with scikit-learn 1.9.1 on Python 3.14 (models/meta.json).
+requires-python = "==3.14.*"
+dependencies = [
+    "fastapi[standard]==0.142.2",
+    "joblib==1.6.0",
+    "numpy==2.5.3",
+    "pandas==3.0.6",
+    "pydantic-settings==2.15.0",
+    "scikit-learn==1.9.1",
+    "scipy==1.18.1",
+]
+
+[dependency-groups]
+dev = [
+    "networkx==3.7",
+    "pytest==9.1.1",
+]
+
+[tool.fastapi]
+entrypoint = "app.main:app"
+
+[tool.uv]
+package = false
