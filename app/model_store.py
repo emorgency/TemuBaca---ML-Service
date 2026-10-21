@@ -4,7 +4,14 @@ import joblib
 import pandas as pd
 
 from app.config import settings
-from app.training import CATALOG_FILE, META_FILE, VECTORIZER_FILE, VECTORS_FILE
+from app.training import (
+    CATALOG_FILE,
+    COMMUNITIES_FILE,
+    INTEREST_SEPARATOR,
+    META_FILE,
+    VECTORIZER_FILE,
+    VECTORS_FILE,
+)
 
 
 # =========================
@@ -25,6 +32,14 @@ catalog = pd.read_csv(
     dtype={"book_id": str, "title": str, "popularity_rank": int},
     keep_default_na=False,
 )
+
+# Verified communities with tags and a kab/kota, sorted by id (ML-T05).
+community_rows = pd.read_csv(
+    MODEL_DIR / COMMUNITIES_FILE,
+    dtype=str,
+    keep_default_na=False,
+)
+community_rows["interests"] = community_rows["interests"].str.split(INTEREST_SEPARATOR)
 
 model_meta = json.loads((MODEL_DIR / META_FILE).read_text(encoding="utf-8"))
 

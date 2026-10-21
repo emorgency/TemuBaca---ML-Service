@@ -1,8 +1,7 @@
-import pandas as pd
-
+from scipy.sparse import csr_matrix
 from sklearn.metrics.pairwise import cosine_similarity
 
-from app.model_store import tfidf
+from app.model_store import community_rows, tfidf
 from app.region import get_region, is_kabkota
 from app.text import matched_interests, normalize_interests
 
@@ -11,46 +10,12 @@ from app.text import matched_interests, normalize_interests
 # COMMUNITY DATA
 # =========================
 
-# Demo data. region_code values come from data/reference/wilayah_kabkota.csv.
-communities = pd.DataFrame([
-    {
-        "community_id": "C001",
-        "name": "Komunitas Pecinta Fantasy",
-        "interests": "fantasy magic adventure",
-        "region_code": "36.74",
-        "verified": True
-    },
-    {
-        "community_id": "C002",
-        "name": "Klub Buku Romance",
-        "interests": "romance love novel",
-        "region_code": "31.74",
-        "verified": True
-    },
-    {
-        "community_id": "C003",
-        "name": "Komunitas Mystery & Crime",
-        "interests": "mystery crime thriller",
-        "region_code": "36.74",
-        "verified": True
-    },
-    {
-        "community_id": "C004",
-        "name": "Book Club Sains",
-        "interests": "science technology education",
-        "region_code": "32.73",
-        "verified": True
-    },
-    {
-        "community_id": "C005",
-        "name": "Komunitas Literasi Umum",
-        "interests": "reading literacy books",
-        "region_code": "36.74",
-        "verified": True
-    }
-])
+# Verified TemuBaca communities from the training snapshot (ML-T05),
+# scored on their interest tags only.
+communities = community_rows
 
-# Fail at startup if demo data uses a code that is not in the reference table.
+# Training checked every code against the reference table; fail at startup
+# if the artifact and the table disagree anyway.
 community_regions = [
     get_region(code) for code in communities["region_code"]
 ]
@@ -59,9 +24,16 @@ if any(region is None for region in community_regions):
     raise ValueError("community region_code missing from the reference table")
 
 
-community_vectors = tfidf.transform(
-    communities["interests"]
-)
+def build_community_vectors(rows):
+    # The transformer rejects zero rows, which is the normal state before any
+    # verified community has filled in its tags and region.
+    if rows.empty:
+        return csr_matrix((0, len(tfidf.vocabulary_)))
+
+    return tfidf.transform(rows["interests"].str.join(" "))
+
+
+community_vectors = build_community_vectors(communities)
 
 
 NEEDS_INTERESTS_OR_LOCATION = "NEEDS_INTERESTS_OR_LOCATION"
@@ -147,7 +119,7 @@ def recommend_communities(
     user_interests = normalize_interests(user_interests)
     user_region = get_user_region(user_region_code)
 
-    if not user_interests and user_region is None:
+    if (not user_interests and user_region is None) or communities.empty:
         return []
 
     if user_interests:

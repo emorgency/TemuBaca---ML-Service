@@ -533,7 +533,81 @@
       "genres": []
     }
   ],
-  "communities": [],
+  "communities": [
+    {
+      "id": "c0000000-0000-4000-8000-000000000001",
+      "name": "Lingkar Puisi Tangsel",
+      "description": "Komunitas sintetis untuk tes.",
+      "interests": [
+        "Puisi",
+        "Sastra Indonesia"
+      ],
+      "regionCode": "36.74",
+      "updatedAt": "2026-10-20T00:00:00.000Z"
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000002",
+      "name": "Klub Romansa Jaksel",
+      "description": "Komunitas sintetis untuk tes.",
+      "interests": [
+        "Romansa",
+        "Keluarga"
+      ],
+      "regionCode": "31.74",
+      "updatedAt": "2026-10-20T00:00:00.000Z"
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000003",
+      "name": "Komunitas Sejarah Tangsel",
+      "description": "Komunitas sintetis untuk tes.",
+      "interests": [
+        "Sejarah",
+        "Fiksi Sejarah"
+      ],
+      "regionCode": "36.74",
+      "updatedAt": "2026-10-20T00:00:00.000Z"
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000004",
+      "name": "Klub Filsafat Bandung",
+      "description": "Komunitas sintetis untuk tes.",
+      "interests": [
+        "Filsafat",
+        "Nonfiksi"
+      ],
+      "regionCode": "32.73",
+      "updatedAt": "2026-10-20T00:00:00.000Z"
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000005",
+      "name": "Baca Bareng Tangsel",
+      "description": "Komunitas sintetis untuk tes.",
+      "interests": [
+        "Pendidikan",
+        "Anak & Remaja"
+      ],
+      "regionCode": "36.74",
+      "updatedAt": "2026-10-20T00:00:00.000Z"
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000006",
+      "name": "Komunitas Lama Tanpa Tag",
+      "description": "Komunitas sintetis untuk tes.",
+      "interests": [],
+      "regionCode": "36.74",
+      "updatedAt": "2026-10-20T00:00:00.000Z"
+    },
+    {
+      "id": "c0000000-0000-4000-8000-000000000007",
+      "name": "Komunitas Lama Tanpa Wilayah",
+      "description": "Komunitas sintetis untuk tes.",
+      "interests": [
+        "Puisi"
+      ],
+      "regionCode": null,
+      "updatedAt": "2026-10-20T00:00:00.000Z"
+    }
+  ],
   "genres": [
     {
       "slug": "sastra-indonesia",

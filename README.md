@@ -45,6 +45,7 @@ ml-service/
 │   ├── tfidf_vectorizer.joblib
 │   ├── book_vectors.joblib
 │   ├── catalog_books.csv
+│   ├── communities.csv
 │   └── meta.json
 │
 ├── tests/
@@ -217,7 +218,7 @@ POST /api/recommendations/communities
 
 ```json
 {
-  "user_interests": ["fantasy", "magic"],
+  "user_interests": ["Puisi", "Sejarah"],
   "user_region_code": "36.74",
   "top_n": 5
 }
@@ -233,14 +234,14 @@ POST /api/recommendations/communities
 {
   "recommendations": [
     {
-      "community_id": "C001",
-      "name": "Komunitas Pecinta Fantasy",
+      "community_id": "c0000000-0000-4000-8000-000000000003",
+      "name": "Komunitas Sejarah Tangsel",
       "region_code": "36.74",
       "region_name": "Kota Tangerang Selatan",
-      "interest_score": 0.8486,
+      "interest_score": 0.5588,
       "location_score": 1.0,
-      "score": 0.894,
-      "reason": "Sesuai dengan minat: fantasy, magic dan berada di Kota Tangerang Selatan"
+      "score": 0.6912,
+      "reason": "Sesuai dengan minat: sejarah dan berada di Kota Tangerang Selatan"
     }
   ],
   "unmatched_interests": [],
@@ -248,6 +249,9 @@ POST /api/recommendations/communities
 }
 ```
 
+* Contoh di atas adalah item pertama untuk request tersebut dengan `top_n: 1`, memakai model dan komunitas sintetis dari `tests/fixtures/snapshot_small.json`.
+* `community_id` adalah UUID komunitas TemuBaca (`communities.id`). Kandidatnya adalah komunitas `VERIFIED` dari snapshot yang sudah mengisi tag minat (1–5 label genre situs) dan kab/kota. Komunitas yang belum mengisi keduanya dilewati sampai diisi.
+* Skor minat hanya memakai tag minat komunitas, bukan nama atau deskripsinya.
 * Hanya komunitas dengan `score > 0` yang dikembalikan, jadi jumlahnya bisa kurang dari `top_n`.
 * `notice`:
   * `NEEDS_INTERESTS_OR_LOCATION`: minat kosong dan kode wilayah tidak diberikan; `recommendations` kosong.
@@ -403,7 +407,9 @@ models/catalog_books.csv
 models/meta.json
 ```
 
-`models/meta.json` mencatat versi model, waktu snapshot, jumlah buku, ukuran vocabulary, versi scikit-learn, dan genre situs yang belum punya buku. Setelah melatih ulang, jalankan test lalu commit artefaknya.
+Training juga menulis `models/communities.csv` (`community_id,name,region_code,interests`, tag dipisah `|`). Snapshot gagal dilatih jika tag komunitas bukan label genre situs atau kab/kota-nya tidak ada di `data/reference/wilayah_kabkota.csv`. Vektor komunitas dibuat dari tag tersebut saat service mulai.
+
+`models/meta.json` mencatat versi model, waktu snapshot, jumlah buku, jumlah komunitas, ukuran vocabulary, versi scikit-learn, dan genre situs yang belum punya buku. Setelah melatih ulang, jalankan test lalu commit artefaknya.
 
 `MODEL_DIR` (default `models`) menentukan folder model yang dimuat service. Test memakai model dari `tests/fixtures/snapshot_small.json` (data buatan), jadi hasil test tidak bergantung pada isi katalog production.
 
@@ -413,7 +419,9 @@ models/meta.json
 
 * `book_id` adalah UUID buku TemuBaca, jadi website bisa langsung mencocokkan hasil dengan `books.id`.
 * Buku baru di website baru ikut direkomendasikan setelah model dilatih ulang.
-* Community ID seperti `C001`, `C002`, dan seterusnya masih data demo ML dan perlu diganti dengan komunitas dari snapshot (ML-T05).
+* `community_id` adalah UUID komunitas TemuBaca, jadi website bisa langsung mencocokkan hasil dengan `communities.id`.
+* Komunitas yang baru diverifikasi, atau yang baru mengisi tag dan wilayah, baru ikut direkomendasikan setelah model dilatih ulang.
+* Model `temubaca-20261020082721` dilatih dari snapshot sebelum website punya tag dan wilayah komunitas, jadi `communities.csv`-nya masih kosong dan rekomendasi komunitas selalu `NO_MATCH` sampai model dilatih ulang.
 
 ---
 
@@ -423,7 +431,6 @@ models/meta.json
 * Belum menggunakan histori interaksi pengguna sebagai model utama.
 * Popularitas hanya dari jumlah bookmark dan listing; selama keduanya nol, urutan cadangan mengikuti `book_id`.
 * Tanpa stemming: "romantis" dan "romansa" dianggap kata berbeda.
-* Data community saat ini masih berupa data demo.
 * Nilai cosine similarity merupakan skor kemiripan, bukan persentase akurasi.
 
 ---

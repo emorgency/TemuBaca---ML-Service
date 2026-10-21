@@ -6,6 +6,7 @@ import pytest
 
 from app.training import (
     CATALOG_FILE,
+    COMMUNITIES_FILE,
     VECTORIZER_FILE,
     VECTORS_FILE,
     SnapshotError,
@@ -33,6 +34,29 @@ def test_writes_consistent_artifacts(tmp_path):
     assert meta["genres_missing_from_vocabulary"] == []
 
 
+def test_writes_usable_communities_only(tmp_path):
+    meta = train(fixture_snapshot(), tmp_path)
+
+    rows = (tmp_path / COMMUNITIES_FILE).read_text(encoding="utf-8").splitlines()
+
+    assert rows[0] == "community_id,name,region_code,interests"
+    assert rows[1] == "c0000000-0000-4000-8000-000000000001,Lingkar Puisi Tangsel,36.74,Puisi|Sastra Indonesia"
+    assert len(rows) == 6
+    assert meta["community_count"] == 5
+    assert meta["communities_skipped_without_tags_or_region"] == 2
+    assert COMMUNITIES_FILE in meta["artifacts"]
+
+
+def test_trains_without_communities(tmp_path):
+    snapshot = fixture_snapshot()
+    snapshot["communities"] = []
+
+    meta = train(snapshot, tmp_path)
+
+    assert meta["community_count"] == 0
+    assert (tmp_path / COMMUNITIES_FILE).read_text(encoding="utf-8") == "community_id,name,region_code,interests\n"
+
+
 def test_stop_words_cover_both_languages_without_hyphenated_entries():
     stop_words = set(load_stop_words())
 
@@ -46,6 +70,12 @@ def test_stop_words_cover_both_languages_without_hyphenated_entries():
         (lambda s: s.update(version=2), "unsupported snapshot version"),
         (lambda s: s.update(books=[]), "no books"),
         (lambda s: s["books"][1].update(id=s["books"][0]["id"]), "unique id"),
+        (lambda s: s["communities"][0].update(id="C001"), "unique UUID id"),
+        (lambda s: s["communities"][1].update(id=s["communities"][0]["id"]), "unique UUID id"),
+        (lambda s: s["communities"][0].update(interests=["Horor"]), "unknown interests"),
+        (lambda s: s["communities"][0].update(regionCode="36.99"), "unknown kab/kota"),
+        # A province code is a valid region, but communities sit in a kab/kota.
+        (lambda s: s["communities"][0].update(regionCode="36"), "unknown kab/kota"),
     ],
 )
 def test_rejects_unusable_snapshots(tmp_path, change, message):

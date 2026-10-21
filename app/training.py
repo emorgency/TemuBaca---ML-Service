@@ -1,4 +1,4 @@
-"""Train the TF-IDF book model from a TemuBaca catalog snapshot (ML-T04).
+"""Train the TF-IDF book model from a TemuBaca catalog snapshot (ML-T04, ML-T05).
 
 Pure training code: it never loads the served model, so scripts and tests
 can import it before the app starts. The CLI lives in scripts/train_tfidf.py.
@@ -8,6 +8,7 @@ import csv
 import json
 import platform
 import re
+import uuid
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,6 +19,7 @@ import sklearn
 from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS, TfidfVectorizer
 
 from app.config import BASE_DIR
+from app.region import get_region, is_kabkota
 
 
 SNAPSHOT_VERSION = 1
@@ -25,6 +27,7 @@ STOPWORDS_ID_PATH = BASE_DIR / "data" / "reference" / "stopwords_id.txt"
 STOPWORDS_META_PATH = BASE_DIR / "data" / "reference" / "stopwords_meta.json"
 
 CATALOG_FILE = "catalog_books.csv"
+COMMUNITIES_FILE = "communities.csv"
 VECTORIZER_FILE = "tfidf_vectorizer.joblib"
 VECTORS_FILE = "book_vectors.joblib"
 META_FILE = "meta.json"
@@ -35,6 +38,9 @@ class SnapshotError(ValueError):
 
 
 SINGLE_TOKEN = re.compile(r"^\w\w+$")
+
+# communities.csv joins interest labels with this; site genre labels never contain it.
+INTEREST_SEPARATOR = "|"
 
 
 def load_stop_words():
@@ -83,6 +89,47 @@ def validate_snapshot(snapshot):
     return books
 
 
+def is_uuid(value):
+    try:
+        return str(uuid.UUID(value)) == value
+    except (TypeError, ValueError, AttributeError):
+        return False
+
+
+def usable_communities(snapshot):
+    """Verified communities with interest tags and a kab/kota, sorted by id.
+
+    Communities that have not filled in their tags or region yet (created
+    before TB-054) are skipped until they do; anything else that does not
+    match the site genres or the region table fails the build.
+    """
+    genre_labels = {genre["label"] for genre in snapshot.get("genres") or []}
+    communities = snapshot.get("communities") or []
+
+    ids = [community.get("id") for community in communities]
+    if any(not is_uuid(community_id) for community_id in ids) or len(set(ids)) != len(ids):
+        raise SnapshotError("every community needs a unique UUID id")
+
+    usable = []
+    for community in communities:
+        interests = community.get("interests") or []
+        region_code = community.get("regionCode")
+        if not interests or not region_code:
+            continue
+
+        unknown = [label for label in interests if label not in genre_labels]
+        if unknown:
+            raise SnapshotError(f"community {community['id']} has unknown interests: {unknown}")
+
+        region = get_region(region_code)
+        if region is None or not is_kabkota(region):
+            raise SnapshotError(f"community {community['id']} has unknown kab/kota {region_code!r}")
+
+        usable.append(community)
+
+    return sorted(usable, key=lambda community: community["id"]), len(communities) - len(usable)
+
+
 def popularity_sorted(books):
     """Most bookmarked first, then most listed; equal counts keep id order."""
     return sorted(
@@ -98,6 +145,7 @@ def popularity_sorted(books):
 def train(snapshot, out_dir):
     """Fit the vectorizer, write the model artifacts to out_dir, and return the metadata."""
     books = validate_snapshot(snapshot)
+    communities, skipped_communities = usable_communities(snapshot)
     stop_words = load_stop_words()
 
     vectorizer = TfidfVectorizer(
@@ -146,6 +194,18 @@ def train(snapshot, out_dir):
         for book in ordered:
             writer.writerow([book["id"], book["title"], rank[book["id"]]])
 
+    # Community vectors are cheap, so the app builds them from these tags at startup.
+    with open(out_dir / COMMUNITIES_FILE, "w", encoding="utf-8", newline="") as file:
+        writer = csv.writer(file, lineterminator="\n")
+        writer.writerow(["community_id", "name", "region_code", "interests"])
+        for community in communities:
+            writer.writerow([
+                community["id"],
+                community["name"],
+                community["regionCode"],
+                INTEREST_SEPARATOR.join(dict.fromkeys(community["interests"])),
+            ])
+
     stopwords_meta = json.loads(STOPWORDS_META_PATH.read_text(encoding="utf-8"))
     trained_at = datetime.now(timezone.utc)
     meta = {
@@ -157,6 +217,8 @@ def train(snapshot, out_dir):
         "snapshot_generated_at": snapshot.get("generatedAt"),
         "book_count": len(books),
         "vocabulary_size": len(vocabulary),
+        "community_count": len(communities),
+        "communities_skipped_without_tags_or_region": skipped_communities,
         "analyzer": {
             "lowercase": True,
             "strip_accents": "unicode",
@@ -166,7 +228,7 @@ def train(snapshot, out_dir):
             "stopwords_id_source_commit": stopwords_meta["source_commit"],
         },
         "genres_missing_from_vocabulary": missing_genres,
-        "artifacts": [VECTORIZER_FILE, VECTORS_FILE, CATALOG_FILE],
+        "artifacts": [VECTORIZER_FILE, VECTORS_FILE, CATALOG_FILE, COMMUNITIES_FILE],
         "scikit_learn_version": sklearn.__version__,
         "python_version": platform.python_version(),
     }

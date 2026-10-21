@@ -7,6 +7,8 @@
   "snapshot_generated_at": "2026-10-20T08:27:11.210Z",
   "book_count": 330,
   "vocabulary_size": 4862,
+  "community_count": 0,
+  "community_note": "communities.csv added for ML-T05 without retraining: this snapshot predates community tags and regions (website migration 0016), so no community is usable yet.",
   "analyzer": {
     "lowercase": true,
     "strip_accents": "unicode",
@@ -19,7 +21,8 @@
   "artifacts": [
     "tfidf_vectorizer.joblib",
     "book_vectors.joblib",
-    "catalog_books.csv"
+    "catalog_books.csv",
+    "communities.csv"
   ],
   "scikit_learn_version": "1.9.1",
   "python_version": "3.14.7"

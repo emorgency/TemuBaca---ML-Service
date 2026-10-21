@@ -76,8 +76,10 @@ def main():
     meta = train(snapshot, args.out)
     print(
         f"{meta['model_version']}: {meta['book_count']} books, "
-        f"{meta['vocabulary_size']} terms -> {args.out}"
+        f"{meta['vocabulary_size']} terms, {meta['community_count']} communities -> {args.out}"
     )
+    if meta["communities_skipped_without_tags_or_region"]:
+        print(f"communities skipped (no tags or region yet): {meta['communities_skipped_without_tags_or_region']}")
     if meta["genres_missing_from_vocabulary"]:
         print("genres with no matching book yet: " + ", ".join(meta["genres_missing_from_vocabulary"]))
 

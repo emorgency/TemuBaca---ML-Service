@@ -45,7 +45,7 @@ Diperiksa pada commit `deb8fbb` (5 Okt 2026).
 
 Ketidaksesuaian di luar scope dokumen ini, tapi perlu dicatat tim:
 - `API_SPEC.md` menulis `GET /api/recommendations/{books,communities}`, sedangkan repo memakai `POST`.
-- `book_id` Goodbooks dan `community_id` demo (`C001`…) belum dipetakan ke UUID TemuBaca. README sudah mencatat ini.
+- `book_id` Goodbooks dan `community_id` demo (`C001`…) belum dipetakan ke UUID TemuBaca. README sudah mencatat ini. **Selesai:** `book_id` di ML-T04, `community_id` di ML-T05 (komunitas dari snapshot, artefak `models/communities.csv`).
 
 ---
 
@@ -599,7 +599,7 @@ Fase 0 selesai jika:
 - Memfilter komunitas `verified = false` dari rekomendasi (keputusan produk).
 - Merampingkan `requirements.txt` hasil `pip freeze` (`sentry-sdk`, `opentelemetry-*`, dan sejenisnya), misalnya dengan file dependensi tingkat atas + lock. Perlu dipastikan `fastapi dev` tetap berjalan.
 - Memeriksa lisensi dataset Goodbooks-10k yang ikut di-commit.
-- Pemetaan `book_id` Goodbooks dan `community_id` demo ke UUID TemuBaca.
+- Pemetaan `book_id` Goodbooks dan `community_id` demo ke UUID TemuBaca. (Selesai di ML-T04 dan ML-T05.)
 - Menyelaraskan `API_SPEC.md` (saat ini menulis `GET`, repo memakai `POST`).
 
 ---
