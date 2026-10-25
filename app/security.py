@@ -16,6 +16,9 @@ TOKEN_HEADER = "X-Internal-Token"
 # Recommendation requests are at most ~1.2 KB (20 interests of 50 chars).
 MAX_API_BODY_BYTES = 8 * 1024
 
+# A route request is two points and a mode, well under 200 bytes (section 7).
+MAX_ROUTING_BODY_BYTES = 2 * 1024
+
 
 def require_internal_token(
     x_internal_token: str | None = Header(default=None, include_in_schema=False)
@@ -58,11 +61,12 @@ class ApiBodyLimitMiddleware:
         if scope["type"] != "http" or not scope["path"].startswith("/api/"):
             await self.app(scope, receive, send)
             return
+        limit = MAX_ROUTING_BODY_BYTES if scope["path"].startswith("/api/routing/") else self.max_bytes
 
         for name, value in scope.get("headers", []):
             if name == b"content-length":
                 try:
-                    too_large = int(value) > self.max_bytes
+                    too_large = int(value) > limit
                 except ValueError:
                     too_large = True
                 if too_large:
@@ -80,7 +84,7 @@ class ApiBodyLimitMiddleware:
                 break
             chunk = message.get("body", b"")
             size += len(chunk)
-            if size > self.max_bytes:
+            if size > limit:
                 await self._reject(send)
                 return
             chunks.append(chunk)

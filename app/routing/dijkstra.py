@@ -5,12 +5,13 @@ class NoPathError(Exception):
     """The target cannot be reached from the source."""
 
 
-def dijkstra(indptr, indices, weights, source, target):
+def dijkstra(indptr, indices, weights, source, target, stats=None):
     """Return (node_path, edge_positions, total_cost) on a CSR graph.
 
     The edges leaving node `u` sit at CSR positions `indptr[u]..indptr[u + 1]`;
     position k leads to `indices[k]` at cost `weights[k]`. Pass Python lists:
     the road graph converts its arrays once when it is loaded, not per request.
+    When `stats` is a dict, stats["popped"] receives the number of heap pops.
     """
     if source == target:
         return [source], [], 0.0
@@ -19,11 +20,15 @@ def dijkstra(indptr, indices, weights, source, target):
     # Node -> (previous node, CSR position of the edge used to reach it).
     came_from = {}
     heap = [(0.0, source)]
+    popped = 0
 
     while heap:
         cost, node = heapq.heappop(heap)
+        popped += 1
         # Stop as soon as the target is settled.
         if node == target:
+            if stats is not None:
+                stats["popped"] = popped
             return (*_walk_back(came_from, source, target), cost)
         # Lazy deletion: this entry is stale, a cheaper one was already settled.
         if cost > dist[node]:
@@ -36,6 +41,8 @@ def dijkstra(indptr, indices, weights, source, target):
                 came_from[neighbor] = (node, position)
                 heapq.heappush(heap, (candidate, neighbor))
 
+    if stats is not None:
+        stats["popped"] = popped
     raise NoPathError(f"no path from {source} to {target}")
 
 
