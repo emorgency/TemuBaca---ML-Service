@@ -4,3 +4,7 @@ docs/
 scripts/
 .pytest_cache/
 requirements-dev.txt
+# Build inputs for scripts/build_graph.py: never uploaded.
+data/osm/
+cache/
+requirements-build.txt

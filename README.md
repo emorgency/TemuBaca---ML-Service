@@ -4,10 +4,11 @@ Recommendation service untuk fitur rekomendasi buku dan komunitas pada TemuBaca.
 
 ## 1. Fitur
 
-ML Service menyediakan dua fitur utama:
+ML Service menyediakan tiga fitur utama:
 
 * Rekomendasi buku berdasarkan minat pengguna
 * Rekomendasi komunitas berdasarkan minat dan lokasi umum pengguna
+* Rute jalan untuk Peta Literasi (mobil dan jalan kaki) di Jakarta dan Tangerang, memakai Dijkstra (bagian 10b)
 
 Metode yang digunakan:
 
@@ -15,6 +16,7 @@ Metode yang digunakan:
 * Cosine Similarity
 * Rule-based location scoring
 * Popularity fallback
+* Dijkstra di atas graf jalan OpenStreetMap
 
 ---
 
@@ -32,14 +34,23 @@ ml-service/
 │   ├── security.py
 │   ├── recommender.py
 │   ├── community.py
-│   └── schemas.py
+│   ├── schemas.py
+│   └── routing/           # graph.py, dijkstra.py, snap.py, estimate.py, service.py, router.py
+│
+├── config/
+│   ├── coverage.yaml      # wilayah graf (R-01)
+│   └── speeds.yaml        # asumsi kecepatan untuk estimasi waktu
 │
 ├── data/
-│   └── reference/
+│   ├── reference/
+│   ├── graphs/            # graf jalan hasil build (tidak di-commit)
+│   └── osm/               # ekstrak OSM untuk build (tidak di-commit)
 │
 ├── scripts/
 │   ├── build_region_table.py
-│   └── train_tfidf.py
+│   ├── train_tfidf.py
+│   ├── build_graph.py
+│   └── bench_route.py
 │
 ├── models/
 │   ├── tfidf_vectorizer.joblib
@@ -54,8 +65,12 @@ ml-service/
 │   ├── test_regressions.py
 │   ├── test_training.py
 │   ├── test_security.py
+│   ├── test_dijkstra.py
+│   ├── test_routing_graph.py
+│   ├── test_routing_service.py
+│   ├── test_routing_api.py
 │   ├── conftest.py
-│   └── fixtures/snapshot_small.json
+│   └── fixtures/          # snapshot_small.json, small_graph/
 │
 ├── docs/
 │   └── BACKEND_PETA_RUTE.md
@@ -65,6 +80,7 @@ ml-service/
 ├── .fastapicloudignore
 ├── requirements.txt
 ├── requirements-dev.txt
+├── requirements-build.txt # osmnx + osmium, hanya untuk build graf
 ├── pytest.ini
 ├── .env.example
 ├── .python-version
@@ -465,13 +481,106 @@ Lalu isi `RECOMMENDATION_API_URL` (URL aplikasi) dan `RECOMMENDATION_API_KEY` (n
 
 ---
 
+## 10b. Routing (Peta Literasi)
+
+Rute jalan dari titik asal ke tempat di Peta Literasi, dengan Dijkstra buatan sendiri (`app/routing/dijkstra.py`, `heapq`). Rancangan lengkap ada di `docs/BACKEND_PETA_RUTE.md`. Service hanya menerima dua koordinat dan moda; `place_id`, cek `is_routable`, dan tautan Google Maps diurus website (Lampiran A).
+
+### Cakupan dan graf
+
+* Wilayah (R-01, 25 Okt 2026): DKI Jakarta daratan (tanpa Kepulauan Seribu), Kota Tangerang, Kabupaten Tangerang, dan Kota Tangerang Selatan (`config/coverage.yaml`). Titik di luar wilayah ini mendapat `OUT_OF_COVERAGE`.
+* Moda: `drive` (bobot waktu tempuh, menghormati jalan satu arah) dan `walk` (bobot jarak, dua arah).
+* Data: OpenStreetMap, © OpenStreetMap contributors. Atribusi ini tampil di `/health` dan wajib tampil di peta website.
+* Estimasi waktu memakai asumsi kecepatan di `config/speeds.yaml`, bukan data lalu lintas. Setiap rute membawa peringatan `ESTIMATE_NO_TRAFFIC`.
+
+### Membangun graf
+
+Graf dibangun offline dan tidak di-commit. Server Overpass publik tidak andal untuk area sebesar ini (25 Okt 2026: 502, 504, lalu koneksi ditolak), dan wiki OSM menyarankan ekstrak untuk area besar. Bangun dari ekstrak Geofabrik:
+
+```powershell
+pip install -r requirements-build.txt
+Invoke-WebRequest https://download.geofabrik.de/asia/indonesia/java-latest.osm.pbf -OutFile data/osm/java-latest.osm.pbf
+python scripts/build_graph.py --area jakarta-tangerang --mode drive --pbf data/osm/java-latest.osm.pbf
+python scripts/build_graph.py --area jakarta-tangerang --mode walk --pbf data/osm/java-latest.osm.pbf
+```
+
+Cocokkan file ekstrak dengan `java-latest.osm.pbf.md5` dari Geofabrik. Tanpa `--pbf`, skrip memakai Overpass API.
+
+Hasil build 25 Okt 2026 (ekstrak 24 Okt 2026, Linux, RAM 7,5 GB):
+
+| Graf | Node | Edge | File | Puncak memori build | Waktu build |
+| --- | --- | --- | --- | --- | --- |
+| `jakarta-tangerang-drive-2026-10-25` | 238.773 | 564.039 | 69 MB | 3,0 GB | 4 menit |
+| `jakarta-tangerang-walk-2026-10-25` | 386.573 | 993.130 | 112 MB | 4,3 GB | 5 menit |
+
+Build `walk` butuh sekitar 4,3 GB RAM bebas.
+
+### Menjalankan
+
+Isi `ROUTING_GRAPHS` di `.env` dengan nama folder graf di `data/graphs/`, lalu jalankan service seperti biasa:
+
+```text
+ROUTING_GRAPHS=jakarta-tangerang-drive-2026-10-25,jakarta-tangerang-walk-2026-10-25
+```
+
+Graf dimuat saat startup (±6 detik untuk keduanya, ±1,15 GB RAM). Graf yang gagal dimuat dicatat di log dan dilewati: service tetap jalan, rekomendasi tetap berfungsi, dan moda itu membalas `503 ROUTING_UNAVAILABLE`.
+
+### Request dan respons
+
+```powershell
+$body = '{"origin":{"lat":-6.1760,"lng":106.8225},"destination":{"lat":-6.2443,"lng":106.8007},"mode":"drive"}'
+Invoke-RestMethod http://127.0.0.1:8000/api/routing/route -Method Post -ContentType 'application/json' `
+  -Headers @{ 'X-Internal-Token' = $env:INTERNAL_TOKEN } -Body $body
+```
+
+Contoh respons (Jl. Medan Merdeka Barat ke Blok M, `coordinates` dipersingkat dari 356 titik):
+
+```json
+{
+  "mode": "drive",
+  "distance_m": 9040,
+  "duration_s_estimate": 1140,
+  "geometry": { "type": "LineString", "coordinates": [[106.822759, -6.174613], "...", [106.800827, -6.243235]] },
+  "via_streets": ["Jalan Mohammad Husni Thamrin", "Jalan Jenderal Sudirman", "Jalan Pattimura"],
+  "snap": { "origin_offset_m": 156, "destination_offset_m": 119 },
+  "warnings": ["ESTIMATE_NO_TRAFFIC"],
+  "algorithm": "dijkstra",
+  "graph_version": "jakarta-tangerang-drive-2026-10-25"
+}
+```
+
+Error memakai `{"error": {"code", "message", "point"?}}`: `INVALID_PARAMS` (422), `OUT_OF_COVERAGE` dan `SNAP_TOO_FAR` (422, dengan `point`), `NO_PATH` (404), `UNAUTHORIZED` (401), `ROUTING_UNAVAILABLE` (503), `INTERNAL` (500). Body lebih dari 2 KB ditolak `413`. Snap memilih simpang terdekat (maks. `SNAP_MAX_M`, 300 m), sehingga di ruas jalan panjang jarak snap bisa lebih dari 100 m.
+
+Koordinat tidak pernah masuk log. Log rute hanya berisi moda, versi graf, status, latensi, jumlah node yang diproses, dan cache hit.
+
+### Benchmark
+
+`python scripts/bench_route.py --graph <versi> --n 500` merutekan pasangan node acak (seed 20261025). Hasil 25 Okt 2026, Linux, Python 3.14:
+
+| Graf | Iterasi | p50 | p95 | Maks | Node diproses | Memori graf |
+| --- | --- | --- | --- | --- | --- | --- |
+| `drive` | list (dipakai service) | 255 ms | 481 ms | 529 ms | 130.038 | +432 MB |
+| `drive` | array numpy | 385 ms | 720 ms | 821 ms | 130.038 | |
+| `walk` | list (dipakai service) | 410 ms | 768 ms | 1.013 ms | 213.910 | +688 MB |
+| `walk` | array numpy | 660 ms | 1.255 ms | 1.375 ms | 213.910 | |
+
+Iterasi di atas list Python sekitar 1,5x lebih cepat daripada array numpy, jadi graf mengonversi arraynya sekali saat dimuat. Pasangan acak tersebar di seluruh Jakarta–Tangerang, jadi lebih panjang daripada rute nyata ke tempat terdekat: rute dalam kota terukur 3–176 ms. Target latensi belum disepakati.
+
+### Belum diputuskan
+
+* Cara mengirim graf ke server deploy (artefak build, storage, atau build di server). `data/graphs/` tidak ada di Git.
+* Batas memori instance FastAPI Cloud terhadap ±1,15 GB untuk kedua graf.
+* Target latensi.
+
+---
+
 ## 11. API Summary
 
 | Method | Endpoint                           | Fungsi                  |
 | ------ | ---------------------------------- | ----------------------- |
-| GET    | `/health`                          | Status service, `model_version`, `book_count` (tanpa token) |
+| GET    | `/health`                          | Status service, `model_version`, `book_count`, graf rute yang dimuat (tanpa token) |
 | POST   | `/api/recommendations/books`       | Rekomendasi buku (token) |
 | POST   | `/api/recommendations/communities` | Rekomendasi komunitas (token) |
+| POST   | `/api/routing/route`               | Rute Dijkstra antar dua titik (token) |
 
 ---
 
@@ -492,5 +601,5 @@ python -m pytest tests
 Expected result:
 
 ```text
-45 passed
+99 passed
 ```
