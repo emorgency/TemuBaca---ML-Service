@@ -1,0 +1,13 @@
+# Assumed speeds for the duration estimate (docs/BACKEND_PETA_RUTE.md section 6.4).
+# Rough figures for a dense city, not traffic data; every route carries ESTIMATE_NO_TRAFFIC.
+drive_kmh:
+  motorway: 40
+  trunk: 40
+  primary: 30
+  secondary: 25
+  tertiary: 20
+  residential: 15
+  unclassified: 15
+# service, living_street, and any other road class
+drive_default_kmh: 10
+walk_kmh: 4.5

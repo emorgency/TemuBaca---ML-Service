@@ -1,0 +1,14 @@
+{
+ "graph_version": "test-drive-2026-10-25",
+ "area": "test",
+ "mode": "drive",
+ "bbox": [
+  106.825,
+  -6.2,
+  106.84,
+  -6.185
+ ],
+ "nodes": 5,
+ "edges": 7,
+ "attribution": "hand-made test fixture, not OpenStreetMap data"
+}
