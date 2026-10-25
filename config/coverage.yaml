@@ -1,0 +1,16 @@
+# Areas the road graph covers (docs/BACKEND_PETA_RUTE.md section 6.1).
+# R-01, decided 25 Oct 2026: mainland DKI Jakarta (no Kepulauan Seribu, which no road reaches)
+# plus all of Tangerang. Boundaries come from these place names, geocoded once at build time;
+# the graph's bbox is the bounds of their union and is written to meta.json.
+areas:
+  jakarta-tangerang:
+    places:
+      - Jakarta Pusat, Daerah Khusus Ibukota Jakarta, Indonesia
+      - Jakarta Utara, Daerah Khusus Ibukota Jakarta, Indonesia
+      - Jakarta Barat, Daerah Khusus Ibukota Jakarta, Indonesia
+      - Jakarta Selatan, Daerah Khusus Ibukota Jakarta, Indonesia
+      - Jakarta Timur, Daerah Khusus Ibukota Jakarta, Indonesia
+      - Kota Tangerang, Banten, Indonesia
+      - Kabupaten Tangerang, Banten, Indonesia
+      - Kota Tangerang Selatan, Banten, Indonesia
+    modes: [drive, walk]

@@ -1,0 +1,4 @@
+-r requirements.txt
+# Build only (R-09): scripts/build_graph.py. The runtime never imports osmnx.
+osmnx==2.1.1
+osmium==4.3.2

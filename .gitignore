@@ -21,3 +21,9 @@ Thumbs.db
 
 # Road graphs (built offline, never committed)
 data/graphs/
+
+# osmnx HTTP cache from scripts/build_graph.py
+cache/
+
+# OSM extracts for scripts/build_graph.py --pbf (Geofabrik, large)
+data/osm/
