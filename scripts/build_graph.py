@@ -15,6 +15,7 @@ the result depends only on the extract file.
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -22,6 +23,7 @@ import time
 from datetime import date
 from pathlib import Path
 
+import networkx as nx
 import numpy as np
 import osmium
 import osmnx as ox
@@ -109,10 +111,15 @@ def way_filter(mode):
 
 
 def pbf_elements(pbf, polygon, mode, location_cache):
-    """Overpass-style elements for the filtered ways with a node inside `polygon`, and their nodes."""
+    """Yield Overpass-style elements for the filtered ways with a node inside `polygon`, and their nodes.
+
+    A generator, so osmnx consumes the elements as they are read instead of
+    holding a second copy of the whole area in memory.
+    """
     keep = way_filter(mode)
+    useful_tags = set(ox.settings.useful_tags_way)
     shapely.prepare(polygon)
-    nodes, ways = {}, []
+    seen_nodes = set()
     # Java has about 10^8 nodes: keep their locations on disk, not in memory.
     processor = (
         osmium.FileProcessor(str(pbf))
@@ -132,10 +139,63 @@ def pbf_elements(pbf, polygon, mode, location_cache):
         if not shapely.contains_xy(polygon, lngs, lats).any():
             continue
         for (ref, _), lat, lng in zip(points, lats, lngs):
-            nodes[ref] = (float(lat), float(lng))
-        ways.append({"type": "way", "id": way.id, "nodes": [ref for ref, _ in points], "tags": tags})
-    elements = [{"type": "node", "id": ref, "lat": lat, "lon": lng} for ref, (lat, lng) in nodes.items()]
-    return elements + ways
+            if ref not in seen_nodes:
+                seen_nodes.add(ref)
+                yield {"type": "node", "id": ref, "lat": float(lat), "lon": float(lng)}
+        # osmnx keeps only these tags on edges; dropping the rest now saves memory.
+        tags = {key: value for key, value in tags.items() if key in useful_tags}
+        yield {"type": "way", "id": way.id, "nodes": [ref for ref, _ in points], "tags": tags}
+
+
+def memory_mb():
+    """Current resident memory of this process, for the stage log."""
+    with open("/proc/self/statm") as file:
+        return int(file.read().split()[1]) * os.sysconf("SC_PAGE_SIZE") // 1_048_576
+
+
+def drop_outside(graph, polygon):
+    """In-place truncate_graph_polygon(..., truncate_by_edge=True).
+
+    osmnx copies the graph first, which doubles the peak memory on a large area.
+    Same rule: a node outside the polygon stays if any neighbour is inside.
+    """
+    ids = list(graph.nodes)
+    xs = np.fromiter((graph.nodes[node]["x"] for node in ids), float, len(ids))
+    ys = np.fromiter((graph.nodes[node]["y"] for node in ids), float, len(ids))
+    shapely.prepare(polygon)
+    inside = {node for node, flag in zip(ids, shapely.intersects_xy(polygon, xs, ys)) if flag}
+    if not inside:
+        raise SystemExit("no graph nodes inside the polygon")
+    graph.remove_nodes_from([
+        node for node in ids
+        if node not in inside and inside.isdisjoint(set(graph.successors(node)) | set(graph.predecessors(node)))
+    ])
+
+
+class _SimplifyInPlace(nx.MultiDiGraph):
+    """simplify_graph begins with G.copy(), which doubles memory on the raw graph.
+
+    Only for that call: copy() returns the graph itself, so simplification
+    mutates the raw graph, which is not used afterwards.
+    """
+
+    def copy(self, as_view=False):
+        return self
+
+
+def simplify_in_place(graph):
+    graph.__class__ = _SimplifyInPlace
+    try:
+        graph = ox.simplify_graph(graph)
+    finally:
+        graph.__class__ = nx.MultiDiGraph
+    return graph
+
+
+def keep_largest_weak_component(graph):
+    """In-place largest_component(strongly=False), without building a new graph."""
+    largest = max(nx.weakly_connected_components(graph), key=len)
+    graph.remove_nodes_from([node for node in list(graph) if node not in largest])
 
 
 def from_pbf(pbf, polygon, mode, location_cache):
@@ -144,16 +204,19 @@ def from_pbf(pbf, polygon, mode, location_cache):
     poly_buff, _ = ox.projection.project_geometry(poly_proj.buffer(500), crs=crs_utm, to_latlong=True)
     try:
         elements = pbf_elements(pbf, poly_buff, mode, location_cache)
+        graph = _create_graph([{"elements": elements}], mode in ox.settings.bidirectional_network_types)
     finally:
         location_cache.unlink(missing_ok=True)
+    print(f"raw graph: {len(graph):,} nodes, {len(graph.edges):,} edges, {memory_mb():,} MB", flush=True)
 
-    graph = _create_graph([{"elements": elements}], mode in ox.settings.bidirectional_network_types)
-    del elements
-    graph = ox.truncate.truncate_graph_polygon(graph, poly_buff, truncate_by_edge=True)
-    graph = ox.truncate.largest_component(graph, strongly=False)
-    graph = ox.simplify_graph(graph)
-    graph = ox.truncate.truncate_graph_polygon(graph, polygon, truncate_by_edge=True)
-    return ox.truncate.largest_component(graph, strongly=False)
+    drop_outside(graph, poly_buff)
+    keep_largest_weak_component(graph)
+    print(f"inside buffer: {len(graph):,} nodes, {memory_mb():,} MB", flush=True)
+    graph = simplify_in_place(graph)
+    print(f"simplified: {len(graph):,} nodes, {memory_mb():,} MB", flush=True)
+    drop_outside(graph, polygon)
+    keep_largest_weak_component(graph)
+    return graph
 
 
 def clean(graph, mode):
@@ -165,8 +228,13 @@ def clean(graph, mode):
     return graph
 
 
+def sorted_if_list(value):
+    """simplify_graph merges tag values through a set, whose order changes per process; sort for a reproducible build."""
+    return sorted(value) if isinstance(value, list) else value
+
+
 def edge_name(data):
-    name = data.get("name")
+    name = sorted_if_list(data.get("name"))
     return " / ".join(name) if isinstance(name, list) else name
 
 
@@ -194,7 +262,7 @@ def to_arrays(graph, mode, speeds):
         key = (min(a, b), max(a, b), tuple(map(tuple, coords)))
         if key not in edge_index:
             edge_index[key] = len(edges)
-            edges.append({"name": edge_name(data), "highway": data.get("highway"), "coords": coords})
+            edges.append({"name": edge_name(data), "highway": sorted_if_list(data.get("highway")), "coords": coords})
         ref = edge_index[key]
         length = float(data["length"])
         slots.append((a, b, length, travel_time_s(length, data.get("highway"), mode, speeds), ref))
