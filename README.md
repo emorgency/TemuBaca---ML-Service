@@ -509,10 +509,12 @@ Hasil build 25 Okt 2026 (ekstrak 24 Okt 2026, Linux, RAM 7,5 GB):
 
 | Graf | Node | Edge | File | Puncak memori build | Waktu build |
 | --- | --- | --- | --- | --- | --- |
-| `jakarta-tangerang-drive-2026-10-25` | 238.773 | 564.039 | 69 MB | 3,0 GB | 4 menit |
-| `jakarta-tangerang-walk-2026-10-25` | 386.573 | 993.130 | 112 MB | 4,3 GB | 5 menit |
+| `jakarta-tangerang-drive-2026-10-25` | 238.773 | 564.039 | 53 MB | 2,9 GB | 4 menit |
+| `jakarta-tangerang-walk-2026-10-25` | 386.573 | 993.130 | 86 MB | 4,2 GB | 5 menit |
 
 Build `walk` butuh sekitar 4,3 GB RAM bebas.
+
+Format graf (format 2, `meta.json` `"format": 2`): `graph.npz` berisi adjacency CSR, panjang, waktu tempuh, dan geometri semua edge sebagai array datar (`edge_coords`, `edge_coord_offsets`); `edges.json` hanya berisi nama jalan. Bentuk ini dipilih karena FastAPI Cloud membatasi memori 512 MB: format lama (geometri sebagai objek JSON per edge) membuat service + graf `drive` saja 623 MB. Graf format lama ditolak saat dimuat dan harus dibangun ulang.
 
 ### Menjalankan
 
@@ -522,7 +524,13 @@ Isi `ROUTING_GRAPHS` di `.env` dengan nama folder graf di `data/graphs/`, lalu j
 ROUTING_GRAPHS=jakarta-tangerang-drive-2026-10-25,jakarta-tangerang-walk-2026-10-25
 ```
 
-Graf dimuat saat startup (±6 detik untuk keduanya, ±1,15 GB RAM). Graf yang gagal dimuat dicatat di log dan dilewati: service tetap jalan, rekomendasi tetap berfungsi, dan moda itu membalas `503 ROUTING_UNAVAILABLE`.
+Graf dimuat saat startup (±1 detik untuk keduanya). Memori service terukur (RSS, puncak sama):
+
+| `ROUTING_GRAPHS` | Memori |
+| --- | --- |
+| kosong (rekomendasi saja) | 190 MB |
+| `drive` | 285 MB |
+| `drive` + `walk` | 423 MB | Graf yang gagal dimuat dicatat di log dan dilewati: service tetap jalan, rekomendasi tetap berfungsi, dan moda itu membalas `503 ROUTING_UNAVAILABLE`.
 
 ### Request dan respons
 
@@ -554,21 +562,25 @@ Koordinat tidak pernah masuk log. Log rute hanya berisi moda, versi graf, status
 
 ### Benchmark
 
-`python scripts/bench_route.py --graph <versi> --n 500` merutekan pasangan node acak (seed 20261025). Hasil 25 Okt 2026, Linux, Python 3.14:
+`python scripts/bench_route.py --graph <versi> --n 500` merutekan pasangan node acak (seed 20261025) tiga kali: di atas `array.array` (dipakai service), list Python, dan array numpy. Hasil 25 Okt 2026, Linux, Python 3.14, graf format 2. Mesin sedang menjalankan aplikasi lain, jadi bandingkan baris dalam satu graf, bukan angka absolutnya:
 
 | Graf | Iterasi | p50 | p95 | Maks | Node diproses | Memori graf |
 | --- | --- | --- | --- | --- | --- | --- |
-| `drive` | list (dipakai service) | 255 ms | 481 ms | 529 ms | 130.038 | +432 MB |
-| `drive` | array numpy | 385 ms | 720 ms | 821 ms | 130.038 | |
-| `walk` | list (dipakai service) | 410 ms | 768 ms | 1.013 ms | 213.910 | +688 MB |
-| `walk` | array numpy | 660 ms | 1.255 ms | 1.375 ms | 213.910 | |
+| `drive` | `array.array` (service) | 318 ms | 608 ms | 776 ms | 130.038 | +94 MB |
+| `drive` | list | 334 ms | 615 ms | 910 ms | 130.038 | |
+| `drive` | numpy | 486 ms | 903 ms | 1.000 ms | 130.038 | |
+| `walk` | `array.array` (service) | 531 ms | 1.007 ms | 2.400 ms | 213.910 | +159 MB |
+| `walk` | list | 635 ms | 1.182 ms | 1.707 ms | 213.910 | |
+| `walk` | numpy | 828 ms | 1.644 ms | 2.008 ms | 213.910 | |
 
-Iterasi di atas list Python sekitar 1,5x lebih cepat daripada array numpy, jadi graf mengonversi arraynya sekali saat dimuat. Pasangan acak tersebar di seluruh Jakarta–Tangerang, jadi lebih panjang daripada rute nyata ke tempat terdekat: rute dalam kota terukur 3–176 ms. Target latensi belum disepakati.
+`array.array` secepat list (sedikit lebih cepat di p50 dan p95) dengan seperempat memorinya, dan sekitar 1,5x lebih cepat daripada akses elemen numpy. Pasangan acak tersebar di seluruh Jakarta–Tangerang, jadi lebih panjang daripada rute nyata ke tempat terdekat: rute dalam kota terukur 3–176 ms. Target latensi belum disepakati.
+
+### Deploy graf
+
+`data/graphs/` tidak ada di Git, tetapi ikut terunggah saat `fastapi deploy` lewat `!data/graphs/` di `.fastapicloudignore` (±133 MB untuk kedua graf; `data/osm/` dan `cache/` tetap tidak terunggah). Setelah deploy, set `ROUTING_GRAPHS` di environment cloud dengan nama folder graf, lalu cek `/health` menampilkan versi kedua graf. Batas ukuran upload FastAPI Cloud belum tercantum di halaman harganya.
 
 ### Belum diputuskan
 
-* Cara mengirim graf ke server deploy (artefak build, storage, atau build di server). `data/graphs/` tidak ada di Git.
-* Batas memori instance FastAPI Cloud terhadap ±1,15 GB untuk kedua graf.
 * Target latensi.
 
 ---

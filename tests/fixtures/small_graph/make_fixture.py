@@ -72,9 +72,12 @@ def main():
         length_m=np.array([slot[2] for slot in slots]),
         travel_time_s=np.array([travel_time_s(slot[2], edges[slot[3]]["highway"], "drive", speeds) for slot in slots]),
         edge_ref=np.array([slot[3] for slot in slots], dtype=np.int64),
+        edge_coords=np.array([point for edge in edges for point in edge["coords"]], dtype=np.float64),
+        edge_coord_offsets=np.concatenate([[0], np.cumsum([len(edge["coords"]) for edge in edges])]).astype(np.int64),
     )
-    (HERE / "edges.json").write_text(json.dumps(edges, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    (HERE / "edges.json").write_text(json.dumps([edge["name"] for edge in edges], ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     meta = {
+        "format": 2,
         "graph_version": "test-drive-2026-10-25",
         "area": "test",
         "mode": "drive",

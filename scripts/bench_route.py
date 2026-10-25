@@ -4,8 +4,8 @@
 
 Routes between random node pairs (fixed seed) and reports p50, p95, and max
 latency, mean nodes popped, graph size, and process memory after loading.
-Runs each pair twice: over the Python lists the service uses, and over the
-raw numpy arrays, to record why the lists exist (section 6.3).
+Runs each pair three times: over the array.array adjacency the service uses,
+over plain Python lists, and over the raw numpy arrays (section 6.3).
 """
 
 import argparse
@@ -67,7 +67,7 @@ def main():
     before = memory_mb()
     started = time.perf_counter()
     graph = load_graph(settings.graph_path / args.graph)
-    print(f"{graph.version}: {len(graph.lat):,} nodes, {graph.indptr_list[-1]:,} edges, "
+    print(f"{graph.version}: {len(graph.lat):,} nodes, {graph.dijkstra_indptr[-1]:,} edges, "
           f"loaded in {time.perf_counter() - started:.1f} s, +{memory_mb() - before:,.0f} MB "
           f"({memory_mb():,.0f} MB process)", flush=True)
 
@@ -76,7 +76,8 @@ def main():
     pairs = [(rng.randrange(nodes), rng.randrange(nodes)) for _ in range(args.n)]
     print(f"{args.n} random pairs, seed {args.seed}, weights: {'travel_time_s' if graph.mode == 'drive' else 'length_m'}", flush=True)
 
-    report("lists", *run("lists", pairs, graph.indptr_list, graph.indices_list, graph.weights_list))
+    report("array", *run("array", pairs, graph.dijkstra_indptr, graph.dijkstra_indices, graph.dijkstra_weights))
+    report("lists", *run("lists", pairs, graph.dijkstra_indptr.tolist(), graph.dijkstra_indices.tolist(), graph.dijkstra_weights.tolist()))
     weights = graph.travel_time_s if graph.mode == "drive" else graph.length_m
     report("numpy", *run("numpy", pairs, graph.indptr, graph.indices, weights))
 

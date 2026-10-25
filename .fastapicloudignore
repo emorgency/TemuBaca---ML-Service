@@ -8,3 +8,5 @@ requirements-dev.txt
 data/osm/
 cache/
 requirements-build.txt
+# Road graphs are built offline and kept out of Git, but the service needs them (ROUTING_GRAPHS).
+!data/graphs/

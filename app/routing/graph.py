@@ -1,6 +1,7 @@
 import json
 import math
 
+from array import array
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -10,7 +11,9 @@ from scipy.spatial import cKDTree
 
 
 MODES = ("drive", "walk")
-ARRAYS = ("node_ids", "lat", "lng", "indptr", "indices", "length_m", "travel_time_s", "edge_ref")
+# Format 2 keeps edge geometry in graph.npz as flat arrays; edges.json holds street names only.
+GRAPH_FORMAT = 2
+ARRAYS = ("node_ids", "lat", "lng", "indptr", "indices", "length_m", "travel_time_s", "edge_ref", "edge_coords", "edge_coord_offsets")
 
 # Local equirectangular projection (section 6.2): metres per degree.
 M_PER_DEG_LNG_AT_EQUATOR = 111320
@@ -22,14 +25,14 @@ class GraphLoadError(ValueError):
 
 
 @dataclass(frozen=True)
-class EdgeInfo:
-    name: str | None
-    highway: str | list[str] | None
-    coords: list[list[float]]  # polyline as [lng, lat]
-
-
-@dataclass(frozen=True)
 class RoadGraph:
+    """A road graph in compact form: the service must fit in 512 MB with its models.
+
+    Python objects per edge (lists of coordinates, dataclasses) cost about ten
+    times the raw numbers, so geometry stays in numpy arrays and Dijkstra reads
+    `array.array` copies of the adjacency.
+    """
+
     version: str
     mode: str
     bbox: tuple[float, float, float, float]  # min_lng, min_lat, max_lng, max_lat
@@ -39,14 +42,17 @@ class RoadGraph:
     indices: np.ndarray
     length_m: np.ndarray
     travel_time_s: np.ndarray
-    edge_ref: np.ndarray  # CSR position -> index into `edges`
-    edges: list[EdgeInfo]
+    edge_ref: np.ndarray  # CSR position -> edge geometry index
+    edge_names: list[str | None]
+    edge_coords: np.ndarray  # all polylines, [lng, lat] rows
+    edge_coord_offsets: np.ndarray  # geometry i is edge_coords[offsets[i]:offsets[i + 1]]
     kdtree: cKDTree  # over projected node coordinates, in metres
     lat0: float  # projection origin: the middle of the bbox
-    # Plain lists for the Dijkstra loop, converted once at load (section 6.3).
-    indptr_list: list[int]
-    indices_list: list[int]
-    weights_list: list[float]
+    # Compact copies for the Dijkstra loop (section 6.3): indexing an array.array
+    # is about as fast as a list, and numpy element access is much slower.
+    dijkstra_indptr: array
+    dijkstra_indices: array
+    dijkstra_weights: array
 
     def project(self, lat, lng):
         return project(lat, lng, self.lat0)
@@ -54,6 +60,10 @@ class RoadGraph:
     def contains(self, lat, lng):
         min_lng, min_lat, max_lng, max_lat = self.bbox
         return min_lat <= lat <= max_lat and min_lng <= lng <= max_lng
+
+    def edge_polyline(self, ref):
+        """The [lng, lat] rows of one edge geometry, as stored (either direction)."""
+        return self.edge_coords[self.edge_coord_offsets[ref]:self.edge_coord_offsets[ref + 1]]
 
 
 def project(lat, lng, lat0):
@@ -68,18 +78,19 @@ def load_graph(path):
     path = Path(path)
     try:
         meta = json.loads((path / "meta.json").read_text(encoding="utf-8"))
-        edges_raw = json.loads((path / "edges.json").read_text(encoding="utf-8"))
+        names = json.loads((path / "edges.json").read_text(encoding="utf-8"))
         # Never unpickle (R-08): the npz holds plain numeric arrays only.
         with np.load(path / "graph.npz", allow_pickle=False) as npz:
             arrays = {name: npz[name] for name in ARRAYS}
     except FileNotFoundError as error:
         raise GraphLoadError(f"missing file in {path}: {Path(error.filename).name}") from error
     except KeyError as error:
-        raise GraphLoadError(f"graph.npz in {path} lacks array {error}") from error
+        raise GraphLoadError(f"graph.npz in {path} lacks array {error}; rebuild with the current scripts/build_graph.py") from error
 
     version, mode, bbox = _check_meta(meta)
-    edges = [EdgeInfo(edge.get("name"), edge.get("highway"), edge["coords"]) for edge in edges_raw]
-    _check_arrays(arrays, len(edges))
+    if not (isinstance(names, list) and all(name is None or isinstance(name, str) for name in names)):
+        raise GraphLoadError("edges.json must be a list of street names (or null)")
+    _check_arrays(arrays, len(names))
 
     lat0 = (bbox[1] + bbox[3]) / 2
     weights = arrays["travel_time_s"] if mode == "drive" else arrays["length_m"]
@@ -94,17 +105,29 @@ def load_graph(path):
         length_m=arrays["length_m"],
         travel_time_s=arrays["travel_time_s"],
         edge_ref=arrays["edge_ref"],
-        edges=edges,
+        # Street names repeat across many edges; share one string object per name.
+        edge_names=[None if name is None else _intern(name) for name in names],
+        edge_coords=arrays["edge_coords"],
+        edge_coord_offsets=arrays["edge_coord_offsets"],
         kdtree=cKDTree(project(arrays["lat"], arrays["lng"], lat0)),
         lat0=lat0,
-        indptr_list=arrays["indptr"].tolist(),
-        indices_list=arrays["indices"].tolist(),
-        weights_list=weights.tolist(),
+        dijkstra_indptr=array("q", arrays["indptr"].astype(np.int64).tobytes()),
+        dijkstra_indices=array("q", arrays["indices"].astype(np.int64).tobytes()),
+        dijkstra_weights=array("d", weights.astype(np.float64).tobytes()),
     )
+
+
+_interned = {}
+
+
+def _intern(name):
+    return _interned.setdefault(name, name)
 
 
 def _check_meta(meta):
     version, mode, bbox = meta.get("graph_version"), meta.get("mode"), meta.get("bbox")
+    if meta.get("format") != GRAPH_FORMAT:
+        raise GraphLoadError(f"meta.json format must be {GRAPH_FORMAT}; rebuild with the current scripts/build_graph.py")
     if not isinstance(version, str) or not version:
         raise GraphLoadError("meta.json needs graph_version")
     if mode not in MODES:
@@ -138,3 +161,10 @@ def _check_arrays(arrays, edge_count):
         values = arrays[name]
         if not np.all(np.isfinite(values)) or np.any(values < 0):
             raise GraphLoadError(f"{name} must be finite and not negative")
+
+    coords, offsets = arrays["edge_coords"], arrays["edge_coord_offsets"]
+    if coords.ndim != 2 or coords.shape[1] != 2 or not np.all(np.isfinite(coords)):
+        raise GraphLoadError("edge_coords must be finite [lng, lat] rows")
+    if (len(offsets) != edge_count + 1 or offsets[0] != 0 or offsets[-1] != len(coords)
+            or np.any(np.diff(offsets) < 2)):
+        raise GraphLoadError("edge_coord_offsets must split edge_coords into one polyline of 2+ points per edge")

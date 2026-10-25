@@ -40,8 +40,8 @@ def broken_copy(tmp_path, change):
 def test_fixture_loads_with_drive_weights(graph):
     assert graph.version == "test-drive-2026-10-25"
     assert graph.mode == "drive"
-    assert len(graph.lat) == 5 and graph.indptr_list[-1] == 7
-    assert graph.weights_list == graph.travel_time_s.tolist()
+    assert len(graph.lat) == 5 and graph.dijkstra_indptr[-1] == 7
+    assert graph.dijkstra_weights.tolist() == graph.travel_time_s.tolist()
 
 
 def test_rejects_inconsistent_array_sizes(tmp_path):
@@ -77,6 +77,23 @@ def test_rejects_a_missing_file_or_a_bad_mode(tmp_path):
         load_graph(folder)
 
 
+def test_rejects_a_graph_built_in_the_old_format(tmp_path):
+    folder = tmp_path / "graph"
+    shutil.copytree(FIXTURE, folder)
+    meta = json.loads((folder / "meta.json").read_text(encoding="utf-8"))
+    del meta["format"]
+    (folder / "meta.json").write_text(json.dumps(meta), encoding="utf-8")
+    with pytest.raises(GraphLoadError, match="rebuild"):
+        load_graph(folder)
+
+
+def test_rejects_geometry_offsets_that_do_not_cover_the_points(tmp_path):
+    def short(arrays):
+        arrays["edge_coord_offsets"][-1] -= 1
+    with pytest.raises(GraphLoadError, match="edge_coord_offsets"):
+        load_graph(broken_copy(tmp_path, short))
+
+
 def test_refuses_pickled_arrays(tmp_path):
     def pickled(arrays):
         arrays["edge_ref"] = np.array([{"not": "numeric"}] * len(arrays["edge_ref"]), dtype=object)
@@ -89,20 +106,20 @@ def test_refuses_pickled_arrays(tmp_path):
 
 def test_drive_route_prefers_the_faster_streets(graph):
     # A -> B -> C (primary + secondary) beats A -> D -> C (residential) on time.
-    path, _, _ = dijkstra(graph.indptr_list, graph.indices_list, graph.weights_list, A, C)
+    path, _, _ = dijkstra(graph.dijkstra_indptr, graph.dijkstra_indices, graph.dijkstra_weights, A, C)
     assert path == [A, B, C]
 
 
 def test_one_way_street_is_respected(graph):
     # Jl. Empat runs D -> C only, so C -> D goes round through B and A.
-    path, positions, _ = dijkstra(graph.indptr_list, graph.indices_list, graph.weights_list, C, D)
+    path, positions, _ = dijkstra(graph.dijkstra_indptr, graph.dijkstra_indices, graph.dijkstra_weights, C, D)
     assert path == [C, B, A, D]
-    assert [graph.edges[graph.edge_ref[position]].name for position in positions] == ["Jl. Dua", "Jl. Satu", "Jl. Tiga"]
+    assert [graph.edge_names[graph.edge_ref[position]] for position in positions] == ["Jl. Dua", "Jl. Satu", "Jl. Tiga"]
 
 
 def test_isolated_node_has_no_path(graph):
     with pytest.raises(NoPathError):
-        dijkstra(graph.indptr_list, graph.indices_list, graph.weights_list, A, E)
+        dijkstra(graph.dijkstra_indptr, graph.dijkstra_indices, graph.dijkstra_weights, A, E)
 
 
 # Snapping

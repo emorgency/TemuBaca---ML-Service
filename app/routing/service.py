@@ -73,7 +73,7 @@ class RoutePlanner:
                 self._cache.move_to_end(key)
                 path, positions, cost = self._cache[key]
             else:
-                path, positions, cost = dijkstra(graph.indptr_list, graph.indices_list, graph.weights_list, source, target, stats)
+                path, positions, cost = dijkstra(graph.dijkstra_indptr, graph.dijkstra_indices, graph.dijkstra_weights, source, target, stats)
                 self._remember(key, (path, positions, cost))
         except NoPathError:
             self._log(graph, "NO_PATH", started, stats, cache_hit)
@@ -117,11 +117,11 @@ def _geometry(graph, path, positions):
         return [node, node]
     coordinates = []
     for start, position in zip(path, positions):
-        coords = graph.edges[graph.edge_ref[position]].coords
+        coords = graph.edge_polyline(graph.edge_ref[position])
         # A geometry may be stored in either direction; start from the end nearest this edge's first node.
         if _squared_distance(coords[-1], graph, start) < _squared_distance(coords[0], graph, start):
             coords = coords[::-1]
-        coordinates.extend(coords if not coordinates else coords[1:])
+        coordinates.extend((coords if not coordinates else coords[1:]).tolist())
     return coordinates
 
 
@@ -133,7 +133,7 @@ def _via_streets(graph, positions):
     """Up to three street names carrying the most distance, in travel order. Not turn-by-turn directions."""
     lengths, first_seen = {}, {}
     for order, position in enumerate(positions):
-        name = graph.edges[graph.edge_ref[position]].name
+        name = graph.edge_names[graph.edge_ref[position]]
         if not name:
             continue
         # A merged edge carries several names joined with " / "; credit each.

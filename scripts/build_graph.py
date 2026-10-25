@@ -41,7 +41,7 @@ sys.path.insert(0, str(ROOT))
 
 from app.config import settings  # noqa: E402
 from app.routing.estimate import load_speeds, travel_time_s  # noqa: E402
-from app.routing.graph import load_graph  # noqa: E402
+from app.routing.graph import GRAPH_FORMAT, load_graph  # noqa: E402
 
 COVERAGE_FILE = ROOT / "config" / "coverage.yaml"
 ATTRIBUTION = "© OpenStreetMap contributors"
@@ -262,7 +262,7 @@ def to_arrays(graph, mode, speeds):
         key = (min(a, b), max(a, b), tuple(map(tuple, coords)))
         if key not in edge_index:
             edge_index[key] = len(edges)
-            edges.append({"name": edge_name(data), "highway": sorted_if_list(data.get("highway")), "coords": coords})
+            edges.append((edge_name(data), coords))
         ref = edge_index[key]
         length = float(data["length"])
         slots.append((a, b, length, travel_time_s(length, data.get("highway"), mode, speeds), ref))
@@ -278,8 +278,11 @@ def to_arrays(graph, mode, speeds):
         "length_m": np.array([slot[2] for slot in slots]),
         "travel_time_s": np.array([slot[3] for slot in slots]),
         "edge_ref": np.array([slot[4] for slot in slots], dtype=np.int64),
+        # Geometry as flat arrays (format 2): one Python list per point would not fit in 512 MB at runtime.
+        "edge_coords": np.array([point for _, coords in edges for point in coords], dtype=np.float64),
+        "edge_coord_offsets": np.concatenate([[0], np.cumsum([len(coords) for _, coords in edges])]).astype(np.int64),
     }
-    return arrays, edges
+    return arrays, [name for name, _ in edges]
 
 
 def main():
@@ -306,16 +309,17 @@ def main():
     else:
         graph = from_overpass(polygon, args.mode)
     graph = clean(graph, args.mode)
-    arrays, edges = to_arrays(graph, args.mode, load_speeds())
+    arrays, names = to_arrays(graph, args.mode, load_speeds())
 
     built_on = date.today().isoformat()
     version = f"{args.area}-{args.mode}-{built_on}"
     folder = args.out / version
     folder.mkdir(parents=True, exist_ok=True)
     np.savez(folder / "graph.npz", **arrays)
-    (folder / "edges.json").write_text(json.dumps(edges, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    (folder / "edges.json").write_text(json.dumps(names, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     min_lng, min_lat, max_lng, max_lat = polygon.bounds
     meta = {
+        "format": GRAPH_FORMAT,
         "graph_version": version,
         "area": args.area,
         "mode": args.mode,
@@ -334,7 +338,7 @@ def main():
     # Load the result back with the runtime loader, so a broken build fails here.
     load_graph(folder)
     sizes = {path.name: path.stat().st_size for path in sorted(folder.iterdir())}
-    print(f"{version}: {meta['nodes']:,} nodes, {meta['edges']:,} edges ({len(edges):,} distinct geometries)")
+    print(f"{version}: {meta['nodes']:,} nodes, {meta['edges']:,} edges ({len(names):,} distinct geometries)")
     for name, size in sizes.items():
         print(f"  {name}: {size / 1_048_576:.1f} MB")
     print(f"built in {time.monotonic() - started:.0f} s -> {folder}")
