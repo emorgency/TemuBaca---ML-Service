@@ -70,6 +70,7 @@ ml-service/
 │   ├── test_routing_service.py
 │   ├── test_routing_api.py
 │   ├── test_contract.py
+│   ├── test_recommendation_log.py
 │   ├── conftest.py
 │   ├── contract/          # pasangan request/respons yang juga dipakai website
 │   └── fixtures/          # snapshot_small.json, small_graph/
@@ -445,6 +446,7 @@ Training juga menulis `models/communities.csv` (`community_id,name,region_code,i
 * `community_id` adalah UUID komunitas TemuBaca, jadi website bisa langsung mencocokkan hasil dengan `communities.id`.
 * Komunitas yang baru diverifikasi, atau yang baru mengisi tag dan wilayah, baru ikut direkomendasikan setelah model dilatih ulang.
 * Model `temubaca-20261020082721` dilatih dari snapshot sebelum website punya tag dan wilayah komunitas, jadi `communities.csv`-nya masih kosong dan rekomendasi komunitas selalu `NO_MATCH` sampai model dilatih ulang.
+* Setiap request rekomendasi menulis satu baris log `app.recommendations` berisi jumlah saja (ML-T08), misalnya `recommend kind=books model=<versi> interests=2 unmatched=1 results=3 sources=interest:1,popularity:2 notice=- latency_ms=2.2`. Minat, kode wilayah, dan id hasil tidak pernah masuk log; `tests/test_recommendation_log.py` menjaganya. Log akses uvicorn tetap mencatat path dan status.
 
 ---
 
@@ -629,5 +631,5 @@ python -m pytest tests
 Expected result:
 
 ```text
-107 passed
+110 passed
 ```

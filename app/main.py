@@ -1,4 +1,5 @@
 import logging
+import time
 
 from contextlib import asynccontextmanager
 
@@ -21,14 +22,32 @@ from app.schemas import (
     CommunityRecommendationResponse
 )
 
-# uvicorn configures only its own loggers, so routing's INFO lines (graph loads,
-# per-route stats without coordinates) need a handler to reach stdout.
-routing_log = logging.getLogger("app.routing")
-if not routing_log.handlers:
+# uvicorn configures only its own loggers, so the service's INFO lines (graph loads,
+# per-request stats for routes and recommendations) need a handler to reach stdout.
+# Children such as app.routing and app.recommendations propagate to this one.
+app_log = logging.getLogger("app")
+if not app_log.handlers:
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s %(message)s"))
-    routing_log.addHandler(handler)
-    routing_log.setLevel(logging.INFO)
+    app_log.addHandler(handler)
+    app_log.setLevel(logging.INFO)
+
+recommendations_log = logging.getLogger("app.recommendations")
+
+
+def log_recommendations(kind, started, interests, unmatched, results, notice=None):
+    # Counts only (ML-T08): never the interests, the region code, or the ids returned.
+    # Only book results say where they came from (interest or popularity).
+    sources = {}
+    for item in results:
+        if "source" in item:
+            sources[item["source"]] = sources.get(item["source"], 0) + 1
+    recommendations_log.info(
+        "recommend kind=%s model=%s interests=%d unmatched=%d results=%d sources=%s notice=%s latency_ms=%.1f",
+        kind, model_meta.get("model_version"), len(interests), len(unmatched), len(results),
+        ",".join(f"{name}:{count}" for name, count in sorted(sources.items())) or "-", notice or "-",
+        (time.perf_counter() - started) * 1000,
+    )
 
 
 @asynccontextmanager
@@ -81,16 +100,18 @@ def health_check(request: Request):
     response_model=BookRecommendationResponse
 )
 def recommend_books(request: BookRecommendationRequest):
+    started = time.perf_counter()
     recommendations = get_recommendations(
         user_interests=request.user_interests,
         top_n=request.top_n
     )
+    interests = normalize_interests(request.user_interests)
+    unmatched = unmatched_interests(interests)
+    log_recommendations("books", started, interests, unmatched, recommendations)
 
     return {
         "recommendations": recommendations,
-        "unmatched_interests": unmatched_interests(
-            normalize_interests(request.user_interests)
-        )
+        "unmatched_interests": unmatched
     }
 
 
@@ -99,22 +120,25 @@ def recommend_books(request: BookRecommendationRequest):
     response_model=CommunityRecommendationResponse
 )
 def recommend_community(request: CommunityRecommendationRequest):
+    started = time.perf_counter()
     recommendations = recommend_communities(
         user_interests=request.user_interests,
         user_region_code=request.user_region_code,
         top_n=request.top_n
     )
+    interests = normalize_interests(request.user_interests)
+    unmatched = unmatched_interests(interests)
+    notice = community_notice(
+        request.user_interests,
+        request.user_region_code,
+        recommendations
+    )
+    log_recommendations("communities", started, interests, unmatched, recommendations, notice)
 
     return {
         "recommendations": recommendations,
-        "unmatched_interests": unmatched_interests(
-            normalize_interests(request.user_interests)
-        ),
-        "notice": community_notice(
-            request.user_interests,
-            request.user_region_code,
-            recommendations
-        )
+        "unmatched_interests": unmatched,
+        "notice": notice
     }
 
 
