@@ -493,7 +493,7 @@ Setelah deploy, cek:
 
 Lalu isi `RECOMMENDATION_API_URL` (URL aplikasi) dan `RECOMMENDATION_API_KEY` (nilai `INTERNAL_TOKEN`) di environment Vercel website.
 
-**Cold start.** Paket Hobby memakai scale-to-zero, jadi request pertama setelah idle menunggu service start. Pengukuran lokal (Windows, 20 Okt 2026): `import app.main` 9–10 detik pada venv yang hangat, terbesar dari `sklearn.metrics.pairwise` (±5 detik) dan `pandas` (±3 detik); request setelah siap 30–108 ms. Angka di FastAPI Cloud belum diukur. Selama start lebih lama dari batas waktu klien website (3 detik), request itu memakai rekomendasi baseline.
+**Cold start.** Paket Hobby memakai scale-to-zero, jadi request pertama setelah idle menunggu service start. Pengukuran lokal (Windows, 20 Okt 2026): `import app.main` 9–10 detik pada venv yang hangat, terbesar dari `sklearn.metrics.pairwise` (±5 detik) dan `pandas` (±3 detik); request setelah siap 30–108 ms. Di FastAPI Cloud (log 25–26 Okt 2026), proses butuh 1,9–3,0 detik dari "Starting FastAPI" sampai "Application startup complete", termasuk memuat kedua graf rute; waktu penyiapan container sebelum itu tidak tercatat di log. Selama 24 jam log, proses hanya menyala ulang saat deploy, termasuk setelah jeda ±1,5 jam tanpa request, dan `/health` setelah idle 60 detik menjawab dalam 0,4 detik. Bila suatu saat start lebih lama dari batas waktu klien website (3 detik untuk rekomendasi, 5 detik untuk rute), request itu memakai rekomendasi baseline atau menjawab rute tidak tersedia.
 
 ---
 
