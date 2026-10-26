@@ -41,10 +41,10 @@ sys.path.insert(0, str(ROOT))
 
 from app.config import settings  # noqa: E402
 from app.routing.estimate import load_speeds, travel_time_s  # noqa: E402
-from app.routing.graph import GRAPH_FORMAT, load_graph  # noqa: E402
+from app.routing.graph import GRAPH_FORMAT, MODES, load_graph  # noqa: E402
+from app.routing.service import ATTRIBUTION  # noqa: E402
 
 COVERAGE_FILE = ROOT / "config" / "coverage.yaml"
-ATTRIBUTION = "© OpenStreetMap contributors"
 COORD_DECIMALS = 6
 
 # Be polite to the public Overpass server: many small queries, spaced by its own
@@ -288,7 +288,7 @@ def to_arrays(graph, mode, speeds):
 def main():
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--area", required=True)
-    parser.add_argument("--mode", required=True, choices=["drive", "walk"])
+    parser.add_argument("--mode", required=True, choices=MODES)
     parser.add_argument("--out", type=Path, default=settings.graph_path)
     parser.add_argument("--pbf", type=Path, help="local OSM extract (.osm.pbf) to build from instead of the Overpass API")
     args = parser.parse_args()

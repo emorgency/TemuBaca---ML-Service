@@ -1,9 +1,9 @@
 import logging
 
 from fastapi import APIRouter, Request
-from fastapi.exception_handlers import http_exception_handler, request_validation_exception_handler
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from fastapi.routing import APIRoute
 from starlette.exceptions import HTTPException
 
 from app.routing.errors import RoutingError
@@ -12,10 +12,33 @@ from app.routing.schemas import RouteRequest
 
 logger = logging.getLogger("app.routing")
 
-ROUTING_PREFIX = "/api/routing/"
+
+class RoutingRoute(APIRoute):
+    """Answers invalid input and a bad token in the section 5.3 error format.
+
+    Validation and the internal-token dependency run inside the route handler, so
+    catching them here keeps recommendations on FastAPI's default format without
+    any path checks in the app-wide handlers.
+    """
+
+    def get_route_handler(self):
+        handler = super().get_route_handler()
+
+        async def handle(request):
+            try:
+                return await handler(request)
+            except RequestValidationError:
+                raise RoutingError("INVALID_PARAMS") from None
+            except HTTPException as error:
+                if error.status_code == 401:
+                    raise RoutingError("UNAUTHORIZED") from None
+                raise
+
+        return handle
+
 
 # Mounted under the /api router, so the internal token is required (R-07, option b).
-router = APIRouter(prefix="/routing")
+router = APIRouter(prefix="/routing", route_class=RoutingRoute)
 
 
 @router.post("/route")
@@ -33,33 +56,12 @@ def plan_route(body: RouteRequest, request: Request):
         raise RoutingError("INTERNAL") from None
 
 
-def _error(status, code, message, point=None):
-    error = {"code": code, "message": message}
-    if point:
-        error["point"] = point
-    return JSONResponse(status_code=status, content={"error": error})
-
-
 async def _routing_error(request, error):
-    return _error(error.status, error.code, error.message, error.point)
-
-
-async def _validation_error(request, error):
-    # Section 5.3 format only for routing; recommendations keep FastAPI's default.
-    if request.url.path.startswith(ROUTING_PREFIX):
-        exc = RoutingError("INVALID_PARAMS")
-        return _error(exc.status, exc.code, exc.message)
-    return await request_validation_exception_handler(request, error)
-
-
-async def _http_error(request, error):
-    if request.url.path.startswith(ROUTING_PREFIX) and error.status_code == 401:
-        exc = RoutingError("UNAUTHORIZED")
-        return _error(exc.status, exc.code, exc.message)
-    return await http_exception_handler(request, error)
+    content = {"code": error.code, "message": error.message}
+    if error.point:
+        content["point"] = error.point
+    return JSONResponse(status_code=error.status, content={"error": content})
 
 
 def install_error_handlers(app):
     app.add_exception_handler(RoutingError, _routing_error)
-    app.add_exception_handler(RequestValidationError, _validation_error)
-    app.add_exception_handler(HTTPException, _http_error)

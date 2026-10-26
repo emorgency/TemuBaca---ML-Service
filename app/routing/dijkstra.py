@@ -9,8 +9,9 @@ def dijkstra(indptr, indices, weights, source, target, stats=None):
     """Return (node_path, edge_positions, total_cost) on a CSR graph.
 
     The edges leaving node `u` sit at CSR positions `indptr[u]..indptr[u + 1]`;
-    position k leads to `indices[k]` at cost `weights[k]`. Pass Python lists:
-    the road graph converts its arrays once when it is loaded, not per request.
+    position k leads to `indices[k]` at cost `weights[k]`. Pass sequences that
+    index to plain Python numbers (lists, array.array, or a memoryview of a numpy
+    array): indexing a numpy array directly is several times slower.
     When `stats` is a dict, stats["popped"] receives the number of heap pops.
     """
     if source == target:
@@ -21,9 +22,11 @@ def dijkstra(indptr, indices, weights, source, target, stats=None):
     came_from = {}
     heap = [(0.0, source)]
     popped = 0
+    # Local names: this loop runs for every edge of hundreds of thousands of nodes.
+    pop, push, best, inf = heapq.heappop, heapq.heappush, dist.get, float("inf")
 
     while heap:
-        cost, node = heapq.heappop(heap)
+        cost, node = pop(heap)
         popped += 1
         # Stop as soon as the target is settled.
         if node == target:
@@ -36,10 +39,10 @@ def dijkstra(indptr, indices, weights, source, target, stats=None):
         for position in range(indptr[node], indptr[node + 1]):
             neighbor = indices[position]
             candidate = cost + weights[position]
-            if candidate < dist.get(neighbor, float("inf")):
+            if candidate < best(neighbor, inf):
                 dist[neighbor] = candidate
                 came_from[neighbor] = (node, position)
-                heapq.heappush(heap, (candidate, neighbor))
+                push(heap, (candidate, neighbor))
 
     if stats is not None:
         stats["popped"] = popped

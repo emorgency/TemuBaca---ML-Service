@@ -531,13 +531,15 @@ Isi `ROUTING_GRAPHS` di `.env` dengan nama folder graf di `data/graphs/`, lalu j
 ROUTING_GRAPHS=jakarta-tangerang-drive-2026-10-25,jakarta-tangerang-walk-2026-10-25
 ```
 
-Graf dimuat saat startup (±1 detik untuk keduanya). Memori service terukur (RSS, puncak sama):
+Graf dimuat saat startup (±1 detik untuk keduanya). Memori service terukur (RSS, 26 Okt 2026, setelah Dijkstra membaca array graf lewat `memoryview` tanpa salinan kedua):
 
 | `ROUTING_GRAPHS` | Memori |
 | --- | --- |
-| kosong (rekomendasi saja) | 190 MB |
-| `drive` | 285 MB |
-| `drive` + `walk` | 423 MB | Graf yang gagal dimuat dicatat di log dan dilewati: service tetap jalan, rekomendasi tetap berfungsi, dan moda itu membalas `503 ROUTING_UNAVAILABLE`.
+| kosong (rekomendasi saja) | 183 MB |
+| `drive` | 258 MB |
+| `drive` + `walk` | 359 MB |
+
+Graf yang gagal dimuat dicatat di log dan dilewati: service tetap jalan, rekomendasi tetap berfungsi, dan moda itu membalas `503 ROUTING_UNAVAILABLE`.
 
 ### Request dan respons
 
@@ -569,18 +571,18 @@ Koordinat tidak pernah masuk log. Log rute hanya berisi moda, versi graf, status
 
 ### Benchmark
 
-`python scripts/bench_route.py --graph <versi> --n 500` merutekan pasangan node acak (seed 20261025) tiga kali: di atas `array.array` (dipakai service), list Python, dan array numpy. Hasil 25 Okt 2026, Linux, Python 3.14, graf format 2. Mesin sedang menjalankan aplikasi lain, jadi bandingkan baris dalam satu graf, bukan angka absolutnya:
+`python scripts/bench_route.py --graph <versi> --n 500` merutekan pasangan node acak (seed 20261025) tiga kali: lewat `memoryview` atas array numpy (dipakai service), list Python, dan akses elemen numpy langsung. Hasil 26 Okt 2026, Linux, Python 3.14, graf format 2. Mesin sedang menjalankan aplikasi lain, jadi bandingkan baris dalam satu graf, bukan angka absolutnya:
 
 | Graf | Iterasi | p50 | p95 | Maks | Node diproses | Memori graf |
 | --- | --- | --- | --- | --- | --- | --- |
-| `drive` | `array.array` (service) | 318 ms | 608 ms | 776 ms | 130.038 | +94 MB |
-| `drive` | list | 334 ms | 615 ms | 910 ms | 130.038 | |
-| `drive` | numpy | 486 ms | 903 ms | 1.000 ms | 130.038 | |
-| `walk` | `array.array` (service) | 531 ms | 1.007 ms | 2.400 ms | 213.910 | +159 MB |
-| `walk` | list | 635 ms | 1.182 ms | 1.707 ms | 213.910 | |
-| `walk` | numpy | 828 ms | 1.644 ms | 2.008 ms | 213.910 | |
+| `drive` | `memoryview` (service) | 221 ms | 409 ms | 1.331 ms | 130.038 | +76 MB |
+| `drive` | list | 261 ms | 572 ms | 897 ms | 130.038 | |
+| `drive` | numpy | 348 ms | 650 ms | 686 ms | 130.038 | |
+| `walk` | `memoryview` (service) | 360 ms | 679 ms | 4.394 ms | 213.910 | +118 MB |
+| `walk` | list | 466 ms | 897 ms | 1.241 ms | 213.910 | |
+| `walk` | numpy | 581 ms | 1.105 ms | 1.227 ms | 213.910 | |
 
-`array.array` secepat list (sedikit lebih cepat di p50 dan p95) dengan seperempat memorinya, dan sekitar 1,5x lebih cepat daripada akses elemen numpy. Pasangan acak tersebar di seluruh Jakarta–Tangerang, jadi lebih panjang daripada rute nyata ke tempat terdekat: rute dalam kota terukur 3–176 ms. Target latensi belum disepakati.
+`memoryview` tidak menyalin array graf dan lebih cepat daripada list maupun akses elemen numpy. Dibanding versi 25 Okt (salinan `array.array`, p50 318 ms `drive` / 531 ms `walk`), loop Dijkstra kini mengikat `heappop`, `heappush`, dan `dict.get` ke nama lokal. Nilai maks tunggal dipengaruhi beban mesin lain. Pasangan acak tersebar di seluruh Jakarta–Tangerang, jadi lebih panjang daripada rute nyata ke tempat terdekat: rute dalam kota terukur 3–176 ms. Target latensi belum disepakati.
 
 ### Deploy graf
 

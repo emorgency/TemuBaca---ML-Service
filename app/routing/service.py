@@ -6,8 +6,8 @@ from collections import OrderedDict
 
 from app.routing.dijkstra import NoPathError, dijkstra
 from app.routing.errors import RoutingError
-from app.routing.estimate import load_speeds, round_distance_m, round_duration_s
-from app.routing.graph import GraphLoadError, load_graph
+from app.routing.estimate import load_speeds, round_distance_m, round_duration_s, travel_time_s
+from app.routing.graph import MODES, GraphLoadError, load_graph
 from app.routing.snap import snap
 
 
@@ -54,7 +54,7 @@ class RoutePlanner:
         self._cache = OrderedDict()
 
     def versions(self):
-        return {mode: (self.graphs[mode].version if mode in self.graphs else None) for mode in ("drive", "walk")}
+        return {mode: (self.graphs[mode].version if mode in self.graphs else None) for mode in MODES}
 
     def route(self, origin, destination, mode):
         graph = self.graphs.get(mode)
@@ -81,7 +81,7 @@ class RoutePlanner:
 
         distance_m = float(sum(graph.length_m[position] for position in positions))
         # Drive weights are seconds; walk weights are metres at one walking speed.
-        duration_s = cost if mode == "drive" else distance_m / (self.speeds["walk_kmh"] / 3.6)
+        duration_s = cost if mode == "drive" else travel_time_s(distance_m, None, "walk", self.speeds)
         self._log(graph, "OK", started, stats, cache_hit)
         return {
             "mode": mode,

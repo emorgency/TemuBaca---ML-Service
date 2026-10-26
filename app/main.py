@@ -9,6 +9,7 @@ from app.config import settings
 from app.model_store import model_meta
 from app.recommender import get_recommendations
 from app.routing.router import install_error_handlers, router as routing_router
+from app.routing.graph import MODES
 from app.routing.service import ATTRIBUTION, RoutePlanner, load_configured_graphs
 from app.security import ApiBodyLimitMiddleware, require_internal_token
 from app.text import normalize_interests, unmatched_interests
@@ -69,7 +70,7 @@ def health_check(request: Request):
         "model_version": model_meta.get("model_version"),
         "book_count": model_meta.get("book_count"),
         "routing": {
-            **(planner.versions() if planner else {"drive": None, "walk": None}),
+            **(planner.versions() if planner else dict.fromkeys(MODES)),
             "attribution": ATTRIBUTION,
         },
     }

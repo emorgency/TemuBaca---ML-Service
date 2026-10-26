@@ -1,7 +1,7 @@
 import json
 import math
+import sys
 
-from array import array
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -29,8 +29,8 @@ class RoadGraph:
     """A road graph in compact form: the service must fit in 512 MB with its models.
 
     Python objects per edge (lists of coordinates, dataclasses) cost about ten
-    times the raw numbers, so geometry stays in numpy arrays and Dijkstra reads
-    `array.array` copies of the adjacency.
+    times the raw numbers, so everything stays in numpy arrays and Dijkstra reads
+    them through memoryviews, without a second copy.
     """
 
     version: str
@@ -48,11 +48,11 @@ class RoadGraph:
     edge_coord_offsets: np.ndarray  # geometry i is edge_coords[offsets[i]:offsets[i + 1]]
     kdtree: cKDTree  # over projected node coordinates, in metres
     lat0: float  # projection origin: the middle of the bbox
-    # Compact copies for the Dijkstra loop (section 6.3): indexing an array.array
-    # is about as fast as a list, and numpy element access is much slower.
-    dijkstra_indptr: array
-    dijkstra_indices: array
-    dijkstra_weights: array
+    # Views for the Dijkstra loop (section 6.3): indexing a memoryview returns plain
+    # Python numbers about as fast as a list; numpy element access is much slower.
+    dijkstra_indptr: memoryview
+    dijkstra_indices: memoryview
+    dijkstra_weights: memoryview
 
     def project(self, lat, lng):
         return project(lat, lng, self.lat0)
@@ -106,22 +106,15 @@ def load_graph(path):
         travel_time_s=arrays["travel_time_s"],
         edge_ref=arrays["edge_ref"],
         # Street names repeat across many edges; share one string object per name.
-        edge_names=[None if name is None else _intern(name) for name in names],
+        edge_names=[None if name is None else sys.intern(name) for name in names],
         edge_coords=arrays["edge_coords"],
         edge_coord_offsets=arrays["edge_coord_offsets"],
         kdtree=cKDTree(project(arrays["lat"], arrays["lng"], lat0)),
         lat0=lat0,
-        dijkstra_indptr=array("q", arrays["indptr"].astype(np.int64).tobytes()),
-        dijkstra_indices=array("q", arrays["indices"].astype(np.int64).tobytes()),
-        dijkstra_weights=array("d", weights.astype(np.float64).tobytes()),
+        dijkstra_indptr=memoryview(np.ascontiguousarray(arrays["indptr"], dtype=np.int64)),
+        dijkstra_indices=memoryview(np.ascontiguousarray(arrays["indices"], dtype=np.int64)),
+        dijkstra_weights=memoryview(np.ascontiguousarray(weights, dtype=np.float64)),
     )
-
-
-_interned = {}
-
-
-def _intern(name):
-    return _interned.setdefault(name, name)
 
 
 def _check_meta(meta):

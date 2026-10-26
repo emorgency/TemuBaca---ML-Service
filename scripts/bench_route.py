@@ -4,7 +4,7 @@
 
 Routes between random node pairs (fixed seed) and reports p50, p95, and max
 latency, mean nodes popped, graph size, and process memory after loading.
-Runs each pair three times: over the array.array adjacency the service uses,
+Runs each pair three times: over the memoryviews the service uses,
 over plain Python lists, and over the raw numpy arrays (section 6.3).
 """
 
@@ -76,7 +76,7 @@ def main():
     pairs = [(rng.randrange(nodes), rng.randrange(nodes)) for _ in range(args.n)]
     print(f"{args.n} random pairs, seed {args.seed}, weights: {'travel_time_s' if graph.mode == 'drive' else 'length_m'}", flush=True)
 
-    report("array", *run("array", pairs, graph.dijkstra_indptr, graph.dijkstra_indices, graph.dijkstra_weights))
+    report("views", *run("views", pairs, graph.dijkstra_indptr, graph.dijkstra_indices, graph.dijkstra_weights))
     report("lists", *run("lists", pairs, graph.dijkstra_indptr.tolist(), graph.dijkstra_indices.tolist(), graph.dijkstra_weights.tolist()))
     weights = graph.travel_time_s if graph.mode == "drive" else graph.length_m
     report("numpy", *run("numpy", pairs, graph.indptr, graph.indices, weights))
