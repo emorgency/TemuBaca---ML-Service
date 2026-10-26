@@ -477,6 +477,13 @@ fastapi cloud env set INTERNAL_TOKEN --secret
 fastapi deploy
 ```
 
+`fastapi deploy` mengunggah setiap file yang tidak dikecualikan `.gitignore` atau `.fastapicloudignore`, termasuk file lain yang kebetulan ada di folder repo tetapi tidak dilacak Git. Deploy 26 Okt 2026 (`0bf74c4`) karena itu dijalankan dari salinan bersih, berisi hasil `git archive HEAD` ditambah `data/graphs/` (44 file, 139,6 MB):
+
+```bash
+git archive HEAD | tar -x -C /tmp/ml-deploy && cp -r data/graphs /tmp/ml-deploy/data/
+cd /tmp/ml-deploy && git init -q && FASTAPI_CLOUD_APP_ID=<id app> fastapi deploy --large-file-threshold 200
+```
+
 Setelah deploy, cek:
 
 * `GET /health` membalas `200` dengan `model_version` yang sama seperti `models/meta.json`.
