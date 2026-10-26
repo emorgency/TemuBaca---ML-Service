@@ -1,0 +1,50 @@
+{
+  "path": "/api/routing/route",
+  "request": {
+    "origin": {
+      "lat": -6.19,
+      "lng": 106.83
+    },
+    "destination": {
+      "lat": -6.192,
+      "lng": 106.832
+    },
+    "mode": "drive"
+  },
+  "status": 200,
+  "response": {
+    "mode": "drive",
+    "distance_m": 440,
+    "duration_s_estimate": 60,
+    "geometry": {
+      "type": "LineString",
+      "coordinates": [
+        [
+          106.83,
+          -6.19
+        ],
+        [
+          106.832,
+          -6.19
+        ],
+        [
+          106.832,
+          -6.192
+        ]
+      ]
+    },
+    "via_streets": [
+      "Jl. Satu",
+      "Jl. Dua"
+    ],
+    "snap": {
+      "origin_offset_m": 0,
+      "destination_offset_m": 0
+    },
+    "warnings": [
+      "ESTIMATE_NO_TRAFFIC"
+    ],
+    "algorithm": "dijkstra",
+    "graph_version": "test-drive-2026-10-25"
+  }
+}

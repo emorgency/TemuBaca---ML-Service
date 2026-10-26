@@ -1,0 +1,39 @@
+{
+  "path": "/api/recommendations/books",
+  "request": {
+    "user_interests": [
+      "Romansa",
+      "Robot Luar Angkasa"
+    ],
+    "top_n": 3
+  },
+  "status": 200,
+  "response": {
+    "recommendations": [
+      {
+        "book_id": "00000000-0000-4000-8000-000000000004",
+        "title": "Buku Uji Cinta",
+        "score": 0.293,
+        "reason": "Sesuai dengan minat: romansa",
+        "source": "interest"
+      },
+      {
+        "book_id": "00000000-0000-4000-8000-000000000001",
+        "title": "Buku Uji Naga",
+        "score": null,
+        "reason": "Direkomendasikan berdasarkan popularitas buku",
+        "source": "popularity"
+      },
+      {
+        "book_id": "00000000-0000-4000-8000-000000000005",
+        "title": "Buku Uji Revolusi",
+        "score": null,
+        "reason": "Direkomendasikan berdasarkan popularitas buku",
+        "source": "popularity"
+      }
+    ],
+    "unmatched_interests": [
+      "robot luar angkasa"
+    ]
+  }
+}

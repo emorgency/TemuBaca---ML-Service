@@ -1,0 +1,47 @@
+{
+  "path": "/api/recommendations/communities",
+  "request": {
+    "user_interests": [
+      "Puisi"
+    ],
+    "user_region_code": "36.74",
+    "top_n": 3
+  },
+  "status": 200,
+  "response": {
+    "recommendations": [
+      {
+        "community_id": "c0000000-0000-4000-8000-000000000001",
+        "name": "Lingkar Puisi Tangsel",
+        "region_code": "36.74",
+        "region_name": "Kota Tangerang Selatan",
+        "interest_score": 0.6358,
+        "location_score": 1.0,
+        "score": 0.745,
+        "reason": "Sesuai dengan minat: puisi dan berada di Kota Tangerang Selatan"
+      },
+      {
+        "community_id": "c0000000-0000-4000-8000-000000000003",
+        "name": "Komunitas Sejarah Tangsel",
+        "region_code": "36.74",
+        "region_name": "Kota Tangerang Selatan",
+        "interest_score": 0.0,
+        "location_score": 1.0,
+        "score": 0.3,
+        "reason": "Berada di Kota Tangerang Selatan"
+      },
+      {
+        "community_id": "c0000000-0000-4000-8000-000000000005",
+        "name": "Baca Bareng Tangsel",
+        "region_code": "36.74",
+        "region_name": "Kota Tangerang Selatan",
+        "interest_score": 0.0,
+        "location_score": 1.0,
+        "score": 0.3,
+        "reason": "Berada di Kota Tangerang Selatan"
+      }
+    ],
+    "unmatched_interests": [],
+    "notice": null
+  }
+}

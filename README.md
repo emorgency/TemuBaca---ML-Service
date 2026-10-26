@@ -69,7 +69,9 @@ ml-service/
 │   ├── test_routing_graph.py
 │   ├── test_routing_service.py
 │   ├── test_routing_api.py
+│   ├── test_contract.py
 │   ├── conftest.py
+│   ├── contract/          # pasangan request/respons yang juga dipakai website
 │   └── fixtures/          # snapshot_small.json, small_graph/
 │
 ├── docs/
@@ -346,11 +348,16 @@ Hasil:
 5 passed
 ```
 
-### Total
+### Kontrak dengan website (ML-T10)
 
-```text
-45 tests passed
+`tests/contract/*.json` membekukan request yang dikirim website dan respons persis yang diberikan service ini untuk fixture test (buku, komunitas dengan dan tanpa kecocokan, rute, dan rute di luar cakupan). `tests/test_contract.py` gagal bila respons berubah. Website menyimpan salinan identik di `tests/fixtures/ml-contract/` dan mengujinya di `tests/unit/ml-contract.test.ts` (body yang dikirim harus sama, respons harus lolos validasi). Setelah perubahan kontrak yang disengaja:
+
+```bash
+UPDATE_CONTRACT=1 python -m pytest tests/test_contract.py
+cp tests/contract/*.json ../temubaca/tests/fixtures/ml-contract/
 ```
+
+Jumlah total test ada di bagian 13.
 
 ### Regression
 
@@ -613,5 +620,5 @@ python -m pytest tests
 Expected result:
 
 ```text
-99 passed
+107 passed
 ```

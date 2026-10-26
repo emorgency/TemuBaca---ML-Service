@@ -1,0 +1,22 @@
+{
+  "path": "/api/routing/route",
+  "request": {
+    "origin": {
+      "lat": -6.19,
+      "lng": 106.83
+    },
+    "destination": {
+      "lat": -6.9175,
+      "lng": 107.6191
+    },
+    "mode": "drive"
+  },
+  "status": 422,
+  "response": {
+    "error": {
+      "code": "OUT_OF_COVERAGE",
+      "message": "Titik berada di luar cakupan rute.",
+      "point": "destination"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "path": "/api/recommendations/communities",
+  "request": {
+    "user_interests": [
+      "Robot Luar Angkasa"
+    ],
+    "top_n": 3
+  },
+  "status": 200,
+  "response": {
+    "recommendations": [],
+    "unmatched_interests": [
+      "robot luar angkasa"
+    ],
+    "notice": "NO_MATCH"
+  }
+}
